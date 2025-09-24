@@ -439,10 +439,9 @@ class _MeshNetworkDataWidgetState extends State<MeshNetworkDataWidget> {
                               await showDialog(
                                 context: context,
                                 builder: (_) {
-                                  final ssidController = TextEditingController(
-                                      text: "Airtel_NTPL");
+                                  final ssidController = TextEditingController();
                                   final passController =
-                                      TextEditingController(text: "NTPL#1234");
+                                      TextEditingController();
                                   return AlertDialog(
                                     title: Text("Enter Wi-Fi Credentials"),
                                     content: Column(
