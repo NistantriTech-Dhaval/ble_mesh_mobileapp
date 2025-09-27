@@ -3,9 +3,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:leafybot_flutter_app/screens/device_setup/device_setup_page.dart';
-import 'package:leafybot_flutter_app/screens/main_screen.dart';
+import 'package:leafybot_flutter_app/mesh/views/scan_and_provisionning/scan_and_provisioning.dart';
 
+import '../src/app.dart';
 class LoadingScreen extends StatefulWidget {
   @override
   _LoadingScreenState createState() => _LoadingScreenState();
@@ -16,7 +16,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
-      Get.off(() =>  MainScreen());
+      Get.off(() =>  NordicNrfMeshExampleApp());
     });
   }
 
