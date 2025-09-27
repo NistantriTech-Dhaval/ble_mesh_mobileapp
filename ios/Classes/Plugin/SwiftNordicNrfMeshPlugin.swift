@@ -1,36 +1,37 @@
 import Flutter
 import UIKit
 
-public class SwiftNordicNrfMeshPlugin: NSObject, FlutterPlugin {
-    
-    //MARK: Public properties
+public class SwiftNordicNrfMeshPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
+
     var meshManagerApi: DoozMeshManagerApi?
     var messenger: FlutterBinaryMessenger
-    
-    //MARK: Private properties
-    
+    private var eventSink: FlutterEventSink?
+
     init(messenger: FlutterBinaryMessenger) {
         self.messenger = messenger
         self.meshManagerApi = DoozMeshManagerApi(messenger: messenger)
         super.init()
     }
-    
+
     public static func register(with registrar: FlutterPluginRegistrar) {
-        
         let pluginMethodChannel = FlutterMethodChannel(
             name: FlutterChannels.Plugin.getMethodChannelName(),
             binaryMessenger: registrar.messenger()
         )
-        
         let instance = SwiftNordicNrfMeshPlugin(messenger: registrar.messenger())
         registrar.addMethodCallDelegate(instance, channel: pluginMethodChannel)
+
+        // Add EventChannel
+        let eventChannel = FlutterEventChannel(
+            name: "flutter_esp_ble_prov/events",
+            binaryMessenger: registrar.messenger()
+        )
+        eventChannel.setStreamHandler(instance)
     }
-    
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         print("🥂 [SwiftNordicNrfMeshPlugin] Received flutter call : \(call.method)")
-        
         let _method = PluginMethodChannel(call: call)
-        
         switch _method {
         case .error(let error):
             switch error {
@@ -44,11 +45,25 @@ public class SwiftNordicNrfMeshPlugin: NSObject, FlutterPlugin {
                 let nsError = error as NSError
                 result(FlutterError(code: String(nsError.code), message: nsError.localizedDescription, details: nil))
             }
-            break
         case .getPlatformVersion:
             let systemVersion = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
             result(systemVersion)
-            break
         }
+    }
+
+    // MARK: FlutterStreamHandler
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+
+    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
+
+    // Send BLE events to Dart
+    public func sendEvent(_ event: [String: Any]) {
+        eventSink?(event)
     }
 }
