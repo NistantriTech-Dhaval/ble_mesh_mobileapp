@@ -1,23 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:leafybot_flutter_app/controller/mesh_controller.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
-
-import '../../../mesh/widgets/device.dart';
-import '../../app.dart';
+import '../../widgets/device.dart';
 
 class ScanningAndProvisioning extends StatefulWidget {
-  final NordicNrfMesh nordicNrfMesh;
-  final VoidCallback onGoToControl;
-
-  const ScanningAndProvisioning({
-    Key? key,
-    required this.nordicNrfMesh,
-    required this.onGoToControl,
-  }) : super(key: key);
+  const ScanningAndProvisioning({Key? key}) : super(key: key);
 
   @override
   State<ScanningAndProvisioning> createState() =>
@@ -25,6 +17,8 @@ class ScanningAndProvisioning extends StatefulWidget {
 }
 
 class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
+  final MeshController controller = Get.put(MeshController());
+
   late MeshManagerApi _meshManagerApi;
   bool isScanning = true;
   StreamSubscription? _scanSubscription;
@@ -37,7 +31,7 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
   @override
   void initState() {
     super.initState();
-    _meshManagerApi = widget.nordicNrfMesh.meshManagerApi;
+    _meshManagerApi = controller.nordicNrfMesh.meshManagerApi;
     _scanUnprovisionned();
   }
 
@@ -49,22 +43,27 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
   }
 
   Future<void> _scanUnprovisionned() async {
+    print("Getting scanUnprovisionned");
     _serviceData.clear();
     setState(() {
       _devices.clear();
     });
-    await checkAndAskPermissions();
-    _scanSubscription =
-        widget.nordicNrfMesh.scanForUnprovisionedNodes().listen((device) async {
-      if (_devices.every((d) => d.id != device.id)) {
-        final deviceUuid = Uuid.parse(_meshManagerApi.getDeviceUuid(
-            device.serviceData[meshProvisioningUuid]?.toList() ?? []));
-        debugPrint('deviceUuid: $deviceUuid');
-        _serviceData[device.id] = deviceUuid;
-        _devices.add(device);
-        setState(() {});
-      }
-    });
+    _scanSubscription = controller.nordicNrfMesh
+        .scanForUnprovisionedNodes()
+        .listen((device) async {
+          print(device.name);
+          if (_devices.every((d) => d.id != device.id)) {
+            final deviceUuid = Uuid.parse(
+              _meshManagerApi.getDeviceUuid(
+                device.serviceData[meshProvisioningUuid]?.toList() ?? [],
+              ),
+            );
+            debugPrint('deviceUuid: $deviceUuid');
+            _serviceData[device.id] = deviceUuid;
+            _devices.add(device);
+            setState(() {});
+          }
+        });
     setState(() {
       isScanning = true;
     });
@@ -107,17 +106,17 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
         deviceUUID = device.id.toString();
       } else {
         throw UnimplementedError(
-            'device uuid on platform : ${Platform.operatingSystem}');
+          'device uuid on platform : ${Platform.operatingSystem}',
+        );
       }
       final provisioningEvent = ProvisioningEvent();
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => ProvisioningDialog(
-            provisioningEvent: provisioningEvent,
-            onGoToControl: widget.onGoToControl),
+        builder: (_) =>
+            ProvisioningDialog(provisioningEvent: provisioningEvent),
       );
-      final provisionedMeshNodeF = await widget.nordicNrfMesh
+      final provisionedMeshNodeF = await controller.nordicNrfMesh
           .provisioning(
             _meshManagerApi,
             BleMeshManager(),
@@ -131,7 +130,9 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
         await Future.delayed(Duration(seconds: 2));
 
         bleMeshManager.callbacks = DoozProvisionedBleMeshManagerCallbacks(
-            _meshManagerApi, bleMeshManager);
+          _meshManagerApi,
+          bleMeshManager,
+        );
         await bleMeshManager.connect(device);
 
         const groupAddress = 0xC000;
@@ -158,11 +159,7 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
 
               debugPrint('Binding AppKey to model: $sendModelId');
               await _meshManagerApi
-                  .sendConfigModelAppBind(
-                    unicast,
-                    element.address,
-                    sendModelId,
-                  )
+                  .sendConfigModelAppBind(unicast, element.address, sendModelId)
                   .timeout(const Duration(seconds: 5));
 
               await Future.delayed(const Duration(milliseconds: 100));
@@ -197,23 +194,25 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
         // 3. Success Feedback
         scaffoldMessenger.showSnackBar(
           const SnackBar(
-              content:
-                  Text('Provisioning succeeded, redirecting to Home tab...')),
+            content: Text('Provisioning succeeded, redirecting to Home tab...'),
+          ),
         );
 
-        Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);
+        // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);
       } catch (e) {
         debugPrint('Provisioning Error: $e');
         Navigator.of(context).pop();
-        scaffoldMessenger
-            .showSnackBar(const SnackBar(content: Text('Provisioning failed')));
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Provisioning failed')),
+        );
         _scanUnprovisionned();
       }
     } catch (e) {
       debugPrint('Errpr $e');
       Navigator.of(context).pop();
-      scaffoldMessenger
-          .showSnackBar(SnackBar(content: Text('Caught error: $e')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Caught error: $e')),
+      );
     } finally {
       isProvisioning = false;
     }
@@ -221,37 +220,36 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () {
-        if (isScanning) {
-          return Future.value();
-        }
-        return _scanUnprovisionned();
-      },
-      child: Column(
-        children: [
-          if (isScanning) const LinearProgressIndicator(),
-          if (!isScanning && _devices.isEmpty)
-            const Expanded(
-              child: Center(
-                child: Text('No module found'),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Unprovisioned Devices')),
+      body: RefreshIndicator(
+        onRefresh: () {
+          if (isScanning) {
+            return Future.value();
+          }
+          return _scanUnprovisionned();
+        },
+        child: Column(
+          children: [
+            if (isScanning) const LinearProgressIndicator(),
+            if (!isScanning && _devices.isEmpty)
+              const Expanded(child: Center(child: Text('No module found'))),
+            if (_devices.isNotEmpty)
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(8),
+                  children: [
+                    for (var i = 0; i < _devices.length; i++)
+                      Device(
+                        key: ValueKey('device-$i'),
+                        device: _devices.elementAt(i),
+                        onTap: () => provisionDevice(_devices.elementAt(i)),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          if (_devices.isNotEmpty)
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(8),
-                children: [
-                  for (var i = 0; i < _devices.length; i++)
-                    Device(
-                      key: ValueKey('device-$i'),
-                      device: _devices.elementAt(i),
-                      onTap: () => provisionDevice(_devices.elementAt(i)),
-                    ),
-                ],
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -259,10 +257,8 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
 
 class ProvisioningDialog extends StatelessWidget {
   final ProvisioningEvent provisioningEvent;
-  final VoidCallback onGoToControl;
-  const ProvisioningDialog(
-      {Key? key, required this.provisioningEvent, required this.onGoToControl})
-      : super(key: key);
+  const ProvisioningDialog({Key? key, required this.provisioningEvent})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -289,40 +285,45 @@ class ProvisioningDialog extends StatelessWidget {
                       ),
                       ProvisioningState(
                         text: 'onProvisioning',
-                        stream: provisioningEvent.onProvisioning
-                            .map((event) => true),
+                        stream: provisioningEvent.onProvisioning.map(
+                          (event) => true,
+                        ),
                       ),
                       ProvisioningState(
                         text: 'onProvisioningReconnect',
-                        stream: provisioningEvent.onProvisioningReconnect
-                            .map((event) => true),
+                        stream: provisioningEvent.onProvisioningReconnect.map(
+                          (event) => true,
+                        ),
                       ),
                       ProvisioningState(
                         text: 'onConfigCompositionDataStatus',
                         stream: provisioningEvent.onConfigCompositionDataStatus
                             .map((event) {
-                          isCompositionDataDone = true;
-                          return true;
-                        }),
+                              isCompositionDataDone = true;
+                              return true;
+                            }),
                       ),
                       ProvisioningState(
                         text: 'onConfigAppKeyStatus',
                         stream: provisioningEvent.onConfigAppKeyStatus
                             .map((event) => true)
-                            .timeout(Duration(seconds: 30),
-                                onTimeout: (sink) async {
-                          print('Timeout: onConfigAppKeyStatus');
-                          print(
-                              "isCompositionDataDone   $isCompositionDataDone");
-                          Navigator.of(context).pop();
-                          if (isCompositionDataDone == true) {
-                            Future.delayed(const Duration(milliseconds: 500),
-                                this.onGoToControl);
-                          }
-                        }),
+                            .timeout(
+                              Duration(seconds: 30),
+                              onTimeout: (sink) async {
+                                print('Timeout: onConfigAppKeyStatus');
+                                print(
+                                  "isCompositionDataDone   $isCompositionDataDone",
+                                );
+                                Navigator.of(context).pop();
+                                if (isCompositionDataDone == true) {
+                                  // Future.delayed(const Duration(milliseconds: 500),
+                                  //     this.onGoToControl);
+                                }
+                              },
+                            ),
                       ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -338,7 +339,7 @@ class ProvisioningState extends StatelessWidget {
   final String text;
 
   const ProvisioningState({Key? key, required this.stream, required this.text})
-      : super(key: key);
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -350,10 +351,7 @@ class ProvisioningState extends StatelessWidget {
           children: [
             Text(text),
             const Spacer(),
-            Checkbox(
-              value: snapshot.data,
-              onChanged: null,
-            ),
+            Checkbox(value: snapshot.data, onChanged: null),
           ],
         );
       },
@@ -368,20 +366,22 @@ class DoozProvisionedBleMeshManagerCallbacks extends BleMeshManagerCallbacks {
   late StreamSubscription<ConnectionStateUpdate> onDeviceConnectingSubscription;
   late StreamSubscription<ConnectionStateUpdate> onDeviceConnectedSubscription;
   late StreamSubscription<BleManagerCallbacksDiscoveredServices>
-      onServicesDiscoveredSubscription;
+  onServicesDiscoveredSubscription;
   late StreamSubscription<DiscoveredDevice> onDeviceReadySubscription;
   late StreamSubscription<BleMeshManagerCallbacksDataReceived>
-      onDataReceivedSubscription;
+  onDataReceivedSubscription;
   late StreamSubscription<BleMeshManagerCallbacksDataSent>
-      onDataSentSubscription;
+  onDataSentSubscription;
   late StreamSubscription<ConnectionStateUpdate>
-      onDeviceDisconnectingSubscription;
+  onDeviceDisconnectingSubscription;
   late StreamSubscription<ConnectionStateUpdate>
-      onDeviceDisconnectedSubscription;
+  onDeviceDisconnectedSubscription;
   late StreamSubscription<List<int>> onMeshPduCreatedSubscription;
 
   DoozProvisionedBleMeshManagerCallbacks(
-      this.meshManagerApi, this.bleMeshManager) {
+    this.meshManagerApi,
+    this.bleMeshManager,
+  ) {
     onDeviceConnectingSubscription = onDeviceConnecting.listen((event) {
       debugPrint('onDeviceConnecting $event');
     });
@@ -413,8 +413,9 @@ class DoozProvisionedBleMeshManagerCallbacks extends BleMeshManagerCallbacks {
       debugPrint('onDeviceDisconnected $event');
     });
 
-    onMeshPduCreatedSubscription =
-        meshManagerApi.onMeshPduCreated.listen((event) async {
+    onMeshPduCreatedSubscription = meshManagerApi.onMeshPduCreated.listen((
+      event,
+    ) async {
       debugPrint('onMeshPduCreated $event');
       await bleMeshManager.sendPdu(event);
     });
@@ -422,17 +423,17 @@ class DoozProvisionedBleMeshManagerCallbacks extends BleMeshManagerCallbacks {
 
   @override
   Future<void> dispose() => Future.wait([
-        onDeviceConnectingSubscription.cancel(),
-        onDeviceConnectedSubscription.cancel(),
-        onServicesDiscoveredSubscription.cancel(),
-        onDeviceReadySubscription.cancel(),
-        onDataReceivedSubscription.cancel(),
-        onDataSentSubscription.cancel(),
-        onDeviceDisconnectingSubscription.cancel(),
-        onDeviceDisconnectedSubscription.cancel(),
-        onMeshPduCreatedSubscription.cancel(),
-        super.dispose(),
-      ]);
+    onDeviceConnectingSubscription.cancel(),
+    onDeviceConnectedSubscription.cancel(),
+    onServicesDiscoveredSubscription.cancel(),
+    onDeviceReadySubscription.cancel(),
+    onDataReceivedSubscription.cancel(),
+    onDataSentSubscription.cancel(),
+    onDeviceDisconnectingSubscription.cancel(),
+    onDeviceDisconnectedSubscription.cancel(),
+    onMeshPduCreatedSubscription.cancel(),
+    super.dispose(),
+  ]);
 
   @override
   Future<void> sendMtuToMeshManagerApi(int mtu) => meshManagerApi.setMtu(mtu);

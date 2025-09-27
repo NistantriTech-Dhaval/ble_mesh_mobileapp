@@ -1,11 +1,13 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:leafybot_flutter_app/src/views/control_module/provisioned_devices.dart' show ProvisionedDevices;
+import 'package:leafybot_flutter_app/src/views/control_module/provisioned_devices.dart';
 import 'package:leafybot_flutter_app/src/views/home/home.dart';
-import 'package:leafybot_flutter_app/src/views/scan_and_provisionning/scan_and_provisioning.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
+
 import 'package:permission_handler/permission_handler.dart';
+
+import '../src/views/scan_and_provisionning/scan_and_provisioning.dart';
 
 const int homeTab = 0;
 const int provisioningTab = 1;

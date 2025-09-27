@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
+
 import 'model.dart';
 
 class MeshElement extends StatelessWidget {

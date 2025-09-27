@@ -5,10 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../mesh/widgets/mesh_network_widget.dart';
 import '../../app.dart';
-import '../../widgets/mesh_network_widget.dart';
 
 class Home extends StatefulWidget {
   final NordicNrfMesh nordicNrfMesh;
