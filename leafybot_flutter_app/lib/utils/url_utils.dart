@@ -1,0 +1,9 @@
+const String Server = "http://35.154.7.67";
+const String UrlSendOtp = "$Server/api/Auth/send-otp";
+const String UrlLogin = "$Server/api/Auth/login";
+const String UrlAccessTokenValid = "$Server/api/Auth/updateprofile";
+const String UrlUpdateProfile= "$Server/api/Auth/updateprofile";
+const String UrlAllPlantSpecies= "$Server/api/plant/getAllPlantSpecies";
+const String UrlAllSoilTypes= "$Server/api/plant/getAllSoilTypes";
+const String UrlAllPlantLocations= "$Server/api/plant/getAllPlantLocations";
+const String UrlAddPlantLocation= "$Server/api/plant/addPlantLocation";

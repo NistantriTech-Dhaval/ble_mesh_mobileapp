@@ -156,6 +156,7 @@ abstract class BleManager<E extends BleManagerCallbacks> {
                   _device = discoveredDevice;
                   break;
                 case DeviceConnectionState.connected:
+                  _device = discoveredDevice;
                   _negotiateAndInitGatt(shouldCheckDoozCustomService).then((_) async {
                     if (!_connectCompleter.isCompleted) {
                       String? deviceId = _device!.id;
