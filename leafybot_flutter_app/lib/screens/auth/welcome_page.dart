@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:leafybot_flutter_app/constant/appColors.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_button.dart';
+import 'package:leafybot_flutter_app/mesh/mesh_scan_and_provisioning.dart';
 import 'package:leafybot_flutter_app/screens/device_setup/plant_setup_page.dart';
 
 import '../../Comman_Widget/app_bar.dart';
@@ -55,7 +56,7 @@ class WelcomePage extends StatelessWidget {
               Spacer(),
               // Get Started button
               CustomButton(text: "Get Started", onPressed:(){
-                Get.to(DeviceSetupPage());
+                Get.to(ScanningAndProvisioning());
               })
             ],
           ),

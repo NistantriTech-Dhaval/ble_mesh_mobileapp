@@ -6,6 +6,7 @@ import 'package:leafybot_flutter_app/repository/plantRepository.dart';
 import 'package:leafybot_flutter_app/screens/main_screen.dart';
 
 import '../Comman_Widget/custom_snackbar.dart';
+import '../mesh/provisioned_devices_page.dart';
 import '../models/plant_species_model.dart';
 import '../utils/consstant_utils.dart';
 class DeviceSetupController extends GetxController {
@@ -78,7 +79,7 @@ class DeviceSetupController extends GetxController {
     if (currentStep.value < 2) {
       currentStep.value++;
     } else {
-      Get.offAll(MainScreen());
+      Get.to(ProvisionedDevicesPage());
     }
   }
 

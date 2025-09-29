@@ -25,6 +25,11 @@ class AssetsPath {
   static const String notificationIcon = "${basePath}notification_icon.png";
   static const String alertIcon = "${basePath}alert_icon.png";
   static const String happyIcon = "${basePath}happy_icon.png";
+  static const String angryIcon = "${basePath}angry_icon.png";
+  static const String sleepyIcon = "${basePath}sleepy_icon.png";
+  static const String surprisedIcon = "${basePath}surprised_icon.png";
+  static const String sadIcon = "${basePath}sad_icon.png";
+  static const String neutralIcon = "${basePath}neutral_icon.png";
   static const String water_level_Icon = "${basePath}water_level_icon.png";
   static const String temp_Icon = "${basePath}temperature_icon.png";
   static const String moisture_Icon = "${basePath}moisture_icon.png";
@@ -42,5 +47,9 @@ class AssetsPath {
   static const String sync_Icon = "${basePath}sync_icon.png";
   static const String call_Icon = "${basePath}call_icon.png";
   static const String mail_Icon = "${basePath}mail_icon.png";
+  static const String empty_device_Icon = "${basePath}empty_device.png";
+  static const String wifi_icon = "${basePath}wifi_icon.png";
+  static const String lock_icon = "${basePath}lock_icon.png";
+  static const String care_score_icon = "${basePath}care_score_icon.png";
 
 }

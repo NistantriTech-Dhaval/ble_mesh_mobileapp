@@ -13,8 +13,15 @@ class ReportPageController extends GetxController {
   final RxMap<String, dynamic> selectedBot =
       {"name": "LeafyBot"}.obs;
 
-  DateTimeRange? customRange;
+  DateTimeRange? currentRange;
   RxString selected_date_range = 'Current week'.obs;
+
+
+  @override
+  void onInit() {
+     currentRange=getPresetRange(selected_date_range.value);
+    super.onInit();
+  }
   // Change selected bot
   void selectBot(Map<String, dynamic> bot) {
     selectedBot.value = bot;
@@ -42,7 +49,7 @@ class ReportPageController extends GetxController {
         return DateTimeRange(start: start, end: end);
 
       case 'Custom date range':
-        return customRange ??
+        return currentRange ??
             DateTimeRange(start: today, end: today); // Fallback for null
 
       default:
@@ -54,12 +61,18 @@ class ReportPageController extends GetxController {
       context: Get.context!,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      initialDateRange: customRange ?? DateTimeRange(start: DateTime.now(), end: DateTime.now()),
+      saveText: 'Apply',
+      cancelText: 'Cancel',
+      initialDateRange: currentRange ??
+          DateTimeRange(
+            start: DateTime.now(),
+            end: DateTime.now(),
+          ),
     );
 
     if (picked != null) {
-        customRange = picked;
-        selected_date_range.value = 'Custom date range';
+      currentRange = picked;
+      selected_date_range.value = 'Custom date range';
     }
   }
 }

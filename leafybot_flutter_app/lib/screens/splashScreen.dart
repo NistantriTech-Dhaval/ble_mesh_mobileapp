@@ -3,9 +3,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:leafybot_flutter_app/mesh/views/scan_and_provisionning/scan_and_provisioning.dart';
+import 'package:leafybot_flutter_app/mesh/provisioned_devices_page.dart';
+import 'package:leafybot_flutter_app/mesh/wifi_provisioning_page.dart';
+import 'package:leafybot_flutter_app/screens/auth/login_page.dart';
+import 'package:leafybot_flutter_app/screens/auth/welcome_page.dart';
+import 'package:leafybot_flutter_app/screens/main_screen.dart';
 
-import '../src/app.dart';
+
 class LoadingScreen extends StatefulWidget {
   @override
   _LoadingScreenState createState() => _LoadingScreenState();
@@ -16,7 +20,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
-      Get.off(() =>  NordicNrfMeshExampleApp());
+      Get.off(() =>  MainScreen());
     });
   }
 

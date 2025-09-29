@@ -42,7 +42,12 @@ dependencies:
   shared_preferences: ^2.5.3
   http: ^1.5.0
   permission_handler: ^12.0.1
+  flutter_blue_plus: ^2.0.0
+  fl_chart: ^1.1.1
+  app_settings: ^6.1.1
   device_info_plus: ^11.1.1
+  intl: ^0.20.2
+  flutter_date_range_picker: ^0.2.1
   nordic_nrf_mesh:
     path: ../
 
