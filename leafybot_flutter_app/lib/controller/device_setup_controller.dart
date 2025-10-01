@@ -1,14 +1,13 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/models/plant_location_model.dart';
 import 'package:leafybot_flutter_app/models/soil_type_model.dart';
 import 'package:leafybot_flutter_app/repository/plantRepository.dart';
-import 'package:leafybot_flutter_app/screens/main_screen.dart';
-
 import '../Comman_Widget/custom_snackbar.dart';
 import '../mesh/provisioned_devices_page.dart';
 import '../models/plant_species_model.dart';
-import '../utils/consstant_utils.dart';
+
 class DeviceSetupController extends GetxController {
   /// Track the current step in setup flow (0–3)
   var currentStep = 0.obs;
@@ -17,7 +16,7 @@ class DeviceSetupController extends GetxController {
   final RxList<PlantSpecies> filteredPlantsList = <PlantSpecies>[].obs;
   final RxList<SoilType> soilList = <SoilType>[].obs;
   final RxList<PlantLocation> plantlocationlist = <PlantLocation>[].obs;
-
+  final GlobalKey<FormBuilderState> formKey = GlobalKey<FormBuilderState>();
   var selectedSoilType = Rxn<SoilType>();
   var selectedPlantSpecies = Rxn<PlantSpecies>();
   var selectedPlantLocation = Rxn<PlantLocation>();

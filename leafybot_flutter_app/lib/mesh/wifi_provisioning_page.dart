@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:leafybot_flutter_app/constant/assets_path.dart';
@@ -21,9 +22,6 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
   final ProvisionedDeviceController controller = Get.put(
     ProvisionedDeviceController(),
   );
-
-  final MeshController menuController = Get.put(MeshController());
-
   @override
   void initState() {
     super.initState();
@@ -49,8 +47,6 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                     bottom: 34,
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: controller.wifiConnectionFailed.value == true
                         ? [
                             Spacer(),
@@ -161,8 +157,25 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                             ),
                           ]
                         : [
-                            const CircularProgressLoader(),
-                            const SizedBox(height: 24),
+                            Spacer(),
+                            if (controller.wifistatusText.value !=
+                                "Connected to")
+                              const CircularProgressLoader(
+                                size: 40,
+                                strokeWidth: 7,
+                                backgroundcolor: AppColors.grayLight,
+                              ),
+                            if (controller.wifistatusText.value !=
+                                "Connected to")
+                              const SizedBox(height: 24),
+                            if (controller.wifistatusText.value ==
+                                "Connected to")
+                              Image.asset(
+                                AssetsPath.success_gif,
+                                height: 120,
+                                width: 120,
+                                fit: BoxFit.cover,
+                              ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -193,6 +206,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                                   ),
                               ],
                             ),
+                            Spacer(),
                           ],
                   ),
                 )
@@ -360,7 +374,9 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
+        return FormBuilder(
+            key: controller.formKey,
+            child:Padding(
           // This padding allows the sheet to move up when the keyboard opens
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -413,6 +429,8 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: CustomTextField(
                     hintText: "Enter password",
+                    isRequired: true,
+                    isPassword: true,
                     controller: controller.password_controller,
                     textStyle: Theme.of(context).textTheme.titleSmall,
                     filled: true,
@@ -432,7 +450,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                   child: CustomButton(
                     text: "Submit",
                     onPressed: () async {
-                      if (controller.password_controller.text.isNotEmpty) {
+                      if (controller.formKey.currentState!.validate()) {
                         Get.back();
                         controller.selectedWifi.value = deviceName;
                         await controller.connectWithNode();
@@ -443,7 +461,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
               ],
             ),
           ),
-        );
+        ));
       },
     );
   }

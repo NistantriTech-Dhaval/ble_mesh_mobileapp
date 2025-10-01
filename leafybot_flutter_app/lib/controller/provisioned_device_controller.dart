@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_snackbar.dart';
 import 'package:leafybot_flutter_app/screens/main_screen.dart';
@@ -18,6 +19,7 @@ class ProvisionedDeviceController extends GetxController {
   StreamSubscription<IMeshNetwork?>? _updateSub;
   StreamSubscription<IMeshNetwork?>? _importSub;
   StreamSubscription<IMeshNetwork?>? _loadSub;
+  final GlobalKey<FormBuilderState> formKey = GlobalKey<FormBuilderState>();
   final meshController = Get.find<MeshController>();
   final isScanning = false.obs;
   final password_controller = TextEditingController();
@@ -84,6 +86,7 @@ class ProvisionedDeviceController extends GetxController {
       await subscription.cancel();
 
       if (scannedDevices.isEmpty) {
+        isWifiProvisioning.value = false;
         throw Exception("No provisioned device found");
       }
 
@@ -182,9 +185,15 @@ class ProvisionedDeviceController extends GetxController {
                   opCode: 0xC0,
                   keyIndex: 0,
                   parameters: payloadBytes,
-                );
+            );
+                // ).timeout(
+                //   Duration(seconds: 10),
+                //   onTimeout: () async {
+                //     return true;
+                //   },
+                // );
             wifistatusText.value = "Connected to";
-            await Future.delayed(Duration(seconds: 2));
+            await Future.delayed(Duration(seconds: 5));
             Get.offAll(MainScreen());
           }
         }
@@ -200,6 +209,7 @@ class ProvisionedDeviceController extends GetxController {
 
   Future<String> _syncProvisionedDevices() async {
     if (nodes.isEmpty) {
+      isWifiProvisioning.value = false;
       debugPrint("No provisioned devices found.");
       return jsonEncode({}); // Return empty JSON object if no devices
     }

@@ -99,7 +99,7 @@ class PlantSetupPage extends StatelessWidget {
         filterBorderWidth: 1,
         filterBorderRadius: 10,
         filterSpacing: 15,
-        onChanged: (value) => controller.searchPlants(value),
+        onChanged: (value) => controller.searchPlants(value??""),
       ),
     );
   }

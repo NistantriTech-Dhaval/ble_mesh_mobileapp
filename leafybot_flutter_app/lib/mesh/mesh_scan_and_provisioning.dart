@@ -31,10 +31,22 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
 
   initNetwork() async {
     await controller.askPermissions();
-    await controller.loadMeshNetwork();
-    await controller.scanUnprovisioned();
-    controller.isBluetooth.value= await FlutterBluePlus.isSupported;
+    FlutterBluePlus.adapterState.listen((state) async {
+      switch (state) {
+        case BluetoothAdapterState.on:
+          controller.isBluetooth.value = true;
+          await controller.loadMeshNetwork();
+          await controller.scanUnprovisioned();
+          break;
+        case BluetoothAdapterState.off:
+          controller.isBluetooth.value = false;
+          break;
+        default:
+          print("ℹ️ Bluetooth state: $state");
+      }
+    });
   }
+
   @override
   Widget build(BuildContext context) {
     return Obx(() {
@@ -45,164 +57,211 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
         appBar: CustomAppBar(
           showBack: !provisioning, // hide back button while provisioning
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: provisioning
               ? Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              if(controller.statusText.value!="Provisioning is Completed")
-              const CircularProgressLoader(),
-              const SizedBox(height: 24),
-              Text(
-                controller.statusText.value,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          )
-              : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  "Connect the Device to Bluetooth",
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Obx(
-                    () => ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  title: Text(
-                    'Bluetooth',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
+                  children: [
+                    Spacer(),
+                    if (controller.statusText.value !=
+                        "Provisioning is Completed")
+                      const CircularProgressLoader(
+                        size: 40,
+                        strokeWidth: 7,
+                        backgroundcolor: AppColors.grayLight,
+                      ),
+                    if (controller.statusText.value !=
+                        "Provisioning is Completed")
+                      const SizedBox(height: 24),
+                    if (controller.statusText.value ==
+                        "Provisioning is Completed")
+                      Image.asset(
+                        AssetsPath.success_gif,
+                        height: 120,
+                        width: 120,
+                        fit: BoxFit.cover,
+                      ),
+                    Text(
+                      controller.statusText.value,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  trailing: Switch(
-                    value: controller.isBluetooth.value,
-                    onChanged: (val) => controller.toggleBluetooth(val, context),
-                    trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
-                    activeTrackColor: AppColors.green,
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: AppColors.grayLight,
-                  ),
-                ),
-              ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                title: Text(
-                  'Available Devices',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                trailing: GestureDetector(
-                  onTap: () async => controller.scanUnprovisioned(),
-                  child: Image.asset(AssetsPath.sync_Icon, height: 24, width: 24),
-                ),
-              ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () {
-                    if (controller.isScanning.value) return Future.value();
-                    return controller.scanUnprovisioned();
-                  },
-                  child: Obx(() {
-                    final devices = controller.devices;
-                    if (devices.isEmpty) {
-                      if (controller.isScanning.value) {
-                        return const Center(
-                          child: CircularProgressLoader(color: AppColors.darkBlue),
-                        );
-                      } else {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                AssetsPath.empty_device_Icon,
-                                height: 100,
-                                width: 100,
+                    Spacer(),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        "Connect the Device to Bluetooth",
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Obx(
+                      () => ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                        ),
+                        title: Text(
+                          'Bluetooth',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w400,
                               ),
-
-                              Text(
-                                "No device found",
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleSmall
-                                    ?.copyWith(fontSize: 18, fontWeight: FontWeight.w400),
-                              ),
-                            ],
+                        ),
+                        trailing: Switch(
+                          value: controller.isBluetooth.value,
+                          onChanged: (val) =>
+                              controller.toggleBluetooth(val, context),
+                          trackOutlineColor: MaterialStateProperty.all(
+                            Colors.transparent,
                           ),
-                        );
-                      }
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(left: 24, right: 24, top: 10),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: devices.length,
-                      itemBuilder: (context, i) {
-                        final device = devices[i];
-                        return GestureDetector(
-                          onTap: () => controller.provisionDevice(device, context),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                            decoration: BoxDecoration(
-                              color: AppColors.white,
-                              border: Border.all(color: AppColors.grayLight),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  AssetsPath.happyIcon,
-                                  height: 24,
-                                  width: 24,
-                                  color: Theme.of(context)
-                                      .iconButtonTheme
-                                      .style
-                                      ?.iconColor
-                                      ?.resolve({}) ??
-                                      AppColors.darkBlue,
+                          activeTrackColor: AppColors.green,
+                          inactiveThumbColor: Colors.white,
+                          inactiveTrackColor: AppColors.grayLight,
+                        ),
+                      ),
+                    ),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                      ),
+                      title: Text(
+                        'Available Devices',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      trailing: GestureDetector(
+                        onTap: () async => controller.scanUnprovisioned(),
+                        child: Image.asset(
+                          AssetsPath.sync_Icon,
+                          height: 24,
+                          width: 24,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () {
+                          if (controller.isScanning.value)
+                            return Future.value();
+                          return controller.scanUnprovisioned();
+                        },
+                        child: Obx(() {
+                          final devices = controller.devices;
+                          if (devices.isEmpty) {
+                            if (controller.isScanning.value) {
+                              return const Center(
+                                child: CircularProgressLoader(
+                                  color: AppColors.darkBlue,
                                 ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  device.name,
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w400,
+                              );
+                            } else {
+                              return Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Image.asset(
+                                      AssetsPath.empty_device_Icon,
+                                      height: 100,
+                                      width: 100,
+                                    ),
+
+                                    Text(
+                                      "No device found",
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          }
+
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(
+                              left: 24,
+                              right: 24,
+                              top: 10,
+                            ),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: devices.length,
+                            itemBuilder: (context, i) {
+                              final device = devices[i];
+                              return GestureDetector(
+                                onTap: () =>
+                                    controller.provisionDevice(device, context),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 18,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    border: Border.all(
+                                      color: AppColors.grayLight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        AssetsPath.happyIcon,
+                                        height: 24,
+                                        width: 24,
+                                        color:
+                                            Theme.of(context)
+                                                .iconButtonTheme
+                                                .style
+                                                ?.iconColor
+                                                ?.resolve({}) ??
+                                            AppColors.darkBlue,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        device.name,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  }),
+                              );
+                            },
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       );
     });
   }
-
 }
 
 class DoozProvisionedBleMeshManagerCallbacks extends BleMeshManagerCallbacks {

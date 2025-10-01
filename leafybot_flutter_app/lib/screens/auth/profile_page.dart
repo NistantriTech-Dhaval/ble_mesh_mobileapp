@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 
 import '../../Comman_Widget/app_bar.dart';
@@ -22,7 +23,9 @@ class ProfilePage extends StatelessWidget {
         showBack: false,
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SingleChildScrollView(
+      body: FormBuilder(
+    key: controller.formKey,
+    child:SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -37,6 +40,7 @@ class ProfilePage extends StatelessWidget {
               controller: controller.fullNameController,
               textStyle: Theme.of(context).textTheme.titleSmall,
               filled: true,
+              isRequired: true,
               fillColor: Theme.of(context).scaffoldBackgroundColor,
               borderRadius: 12,
               borderColor: AppColors.grayLight,
@@ -58,6 +62,8 @@ class ProfilePage extends StatelessWidget {
               controller: controller.emailController,
               textStyle: Theme.of(context).textTheme.titleSmall,
               filled: true,
+              isRequired: true,
+              isvalidemail: true,
               fillColor: Theme.of(context).scaffoldBackgroundColor,
               borderRadius: 12,
               borderColor: AppColors.grayLight,
@@ -79,7 +85,7 @@ class ProfilePage extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildLabel(BuildContext context, String text) => Align(

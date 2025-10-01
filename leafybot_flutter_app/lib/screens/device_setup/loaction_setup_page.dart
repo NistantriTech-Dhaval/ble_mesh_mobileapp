@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import '../../Comman_Widget/circular_progressbar.dart';
 import '../../controller/device_setup_controller.dart';
@@ -35,8 +36,7 @@ class PlantLocationSetupPage extends StatelessWidget {
           const SizedBox(height: 16),
           _buildLocationGrid(context, setupController),
         ],
-      ),
-    );
+    ));
   }
 
   // --- Progress Bar ---
@@ -234,7 +234,9 @@ class PlantLocationSetupPage extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
+        return  FormBuilder(
+            key: controller.formKey,
+            child:Padding(
           // This padding allows the sheet to move up when the keyboard opens
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -286,6 +288,7 @@ class PlantLocationSetupPage extends StatelessWidget {
                     controller: textController,
                     textStyle: Theme.of(context).textTheme.titleSmall,
                     filled: true,
+                    isRequired: true,
                     fillColor: Theme.of(context).scaffoldBackgroundColor,
                     borderRadius: 12,
                     borderColor: AppColors.grayLight,
@@ -299,7 +302,7 @@ class PlantLocationSetupPage extends StatelessWidget {
                   child: CustomButton(
                     text: "Add",
                     onPressed: () async {
-                      if (textController.text.isNotEmpty) {
+                      if (controller.formKey.currentState!.validate()) {
                         await controller.addLocatino(textController.text);
                         await controller.loadPlantLocation();
                         Get.back();
@@ -310,7 +313,7 @@ class PlantLocationSetupPage extends StatelessWidget {
               ],
             ),
           ),
-        );
+        ));
       },
     );
 

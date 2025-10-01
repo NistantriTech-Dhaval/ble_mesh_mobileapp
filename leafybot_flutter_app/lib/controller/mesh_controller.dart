@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart';
@@ -30,6 +31,12 @@ class MeshController extends GetxController {
   final statusText = "Provisioning is in process...".obs;
   final bleMeshManager = BleMeshManager();
 
+  @override
+  Future<void> onInit() async {
+    super.onInit();
+    _meshManagerApi = nordicNrfMesh.meshManagerApi;
+    meshNetwork.value = _meshManagerApi.meshNetwork;
+  }
   Future<void> askPermissions() async {
     if (Platform.isAndroid) {
       await [
@@ -44,9 +51,6 @@ class MeshController extends GetxController {
   }
 
   Future<void> loadMeshNetwork() async {
-    _meshManagerApi = nordicNrfMesh.meshManagerApi;
-    meshNetwork.value = _meshManagerApi.meshNetwork;
-
     void _update(IMeshNetwork? network) async {
       meshNetwork.value = network;
       await loadNodesAndGroups();
@@ -83,26 +87,27 @@ class MeshController extends GetxController {
     devices.clear();
     serviceData.clear();
 
-    await askPermissions();
-    isScanning.value = true;
+    if (isBluetooth.value = true) {
+      isScanning.value = true;
 
-    _scanSubscription?.cancel();
-    _scanSubscription = nordicNrfMesh.scanForUnprovisionedNodes().listen((
-      device,
-    ) {
-      if (devices.every((d) => d.id != device.id)) {
-        final deviceUuid = Uuid.parse(
-          _meshManagerApi.getDeviceUuid(
-            device.serviceData[meshProvisioningUuid]?.toList() ?? [],
-          ),
-        );
-        serviceData[device.id] = deviceUuid;
-        devices.add(device);
-      }
-    });
+      _scanSubscription?.cancel();
+      _scanSubscription = nordicNrfMesh.scanForUnprovisionedNodes().listen((
+        device,
+      ) {
+        if (devices.every((d) => d.id != device.id)) {
+          final deviceUuid = Uuid.parse(
+            _meshManagerApi.getDeviceUuid(
+              device.serviceData[meshProvisioningUuid]?.toList() ?? [],
+            ),
+          );
+          serviceData[device.id] = deviceUuid;
+          devices.add(device);
+        }
+      });
 
-    // Auto stop scan after 10 sec
-    Future.delayed(const Duration(seconds: 10), stopScan);
+      // Auto stop scan after 10 sec
+      Future.delayed(const Duration(seconds: 10), stopScan);
+    }
   }
 
   Future<void> stopScan() async {
@@ -115,24 +120,14 @@ class MeshController extends GetxController {
       if (Platform.isAndroid) {
         try {
           await FlutterBluePlus.turnOn(); // Android: request to enable Bluetooth
-          isBluetooth.value = true;
-          await scanUnprovisioned();
         } catch (e) {
-          isBluetooth.value = false;
           AppSnackBar.show("info", "Please turn ON Bluetooth");
         }
       } else if (Platform.isIOS) {
-        // iOS cannot programmatically turn on Bluetooth
-        if (!isBluetooth.value) {
-          AppSnackBar.show("info", "Please enable Bluetooth from Settings");
-        }
-        isBluetooth.value = true; // assume user will turn it on
-        await scanUnprovisioned();
+       // await AppSettings.openAppSettings(type:AppSettingsType.bluetooth,asAnotherTask: true);
       }
-    } else {
-      await FlutterBluePlus.turnOff();
-      isBluetooth.value = false;
-      devices.clear();
+    }else{
+    // await AppSettings.openAppSettings(type:AppSettingsType.bluetooth,asAnotherTask: true);
     }
   }
 
@@ -280,7 +275,7 @@ class MeshController extends GetxController {
         print("Provisioning is Completed");
         statusText.value = "Provisioning is Completed";
         // Wait 2 seconds then navigate
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 5));
         // Navigate directly using GetX
         Get.to(DeviceSetupPage());
         isProvisioning.value = false;

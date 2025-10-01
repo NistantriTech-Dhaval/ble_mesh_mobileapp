@@ -1,14 +1,12 @@
-
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:leafybot_flutter_app/mesh/provisioned_devices_page.dart';
 import 'package:leafybot_flutter_app/mesh/wifi_provisioning_page.dart';
 import 'package:leafybot_flutter_app/screens/auth/login_page.dart';
 import 'package:leafybot_flutter_app/screens/auth/welcome_page.dart';
-import 'package:leafybot_flutter_app/screens/main_screen.dart';
+import 'package:leafybot_flutter_app/screens/device_setup/device_setup_page.dart';
 
+import '../mesh/mesh_scan_and_provisioning.dart';
 
 class LoadingScreen extends StatefulWidget {
   @override
@@ -20,7 +18,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
-      Get.off(() =>  MainScreen());
+      Get.off(() =>  WelcomePage());
     });
   }
 

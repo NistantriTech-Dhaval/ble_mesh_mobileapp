@@ -43,14 +43,17 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
         appBar: CustomAppBar(
           showBack: !provisioning, // hide back button while provisioning
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: provisioning
               ? Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const CircularProgressLoader(),
+              Spacer(),
+                const CircularProgressLoader(
+                  size: 40,
+                  strokeWidth: 7,
+                  backgroundcolor: AppColors.grayLight,
+                ),
               const SizedBox(height: 24),
               Text(
                 meshcontroller.statusText.value,
@@ -61,6 +64,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
+              Spacer(),
             ],
           )
               : Column(

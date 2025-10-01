@@ -51,5 +51,8 @@ class AssetsPath {
   static const String wifi_icon = "${basePath}wifi_icon.png";
   static const String lock_icon = "${basePath}lock_icon.png";
   static const String care_score_icon = "${basePath}care_score_icon.png";
+  static const String eye_off_icon = "${basePath}eye_off.png";
+  static const String eye_on_icon = "${basePath}eye_on.png";
+  static const String success_gif = "${basePath}success.gif";
 
 }

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:leafybot_flutter_app/constant/appColors.dart';
+import 'package:leafybot_flutter_app/constant/assets_path.dart';
 
 class CustomTextField extends StatelessWidget {
   final String? hintText;
   final TextEditingController? controller;
   final TextInputType? keyboardType;
   final bool obscureText;
-  final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onSubmitted;
+  final void Function(String?)? onChanged;
+  final void Function(String?)? onSubmitted;
   final Widget? prefixIcon;
   final Widget? suffixIcon;
   final VoidCallback? onSuffixTap;
@@ -17,7 +21,9 @@ class CustomTextField extends StatelessWidget {
   final EdgeInsetsGeometry? contentPadding;
   final TextStyle? textStyle;
   final TextInputAction? textInputAction;
-
+  final bool isPassword;
+  final bool isRequired;
+  final bool isvalidemail;
   /// Text field border colors
   final Color? borderColor;
   final Color? errorBorderColor;
@@ -48,6 +54,9 @@ class CustomTextField extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.onSuffixTap,
+    this.isvalidemail=false,
+    this.isPassword = false,
+    this.isRequired = false,
     this.fillColor,
     this.filled = false,
     this.borderRadius = 8,
@@ -71,23 +80,54 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final _showPasswordNotifier = ValueNotifier<bool>(false);
+    return ValueListenableBuilder(
+        valueListenable: _showPasswordNotifier,
+        builder: (BuildContext context, bool showPassword, child) {
+      return  Row(
       children: [
         // Expanded text field
         Expanded(
-          child: TextField(
+          child: FormBuilderTextField(
             controller: controller,
             keyboardType: keyboardType,
-            obscureText: obscureText,
+            obscureText: isPassword ? !showPassword : false,
             onChanged: onChanged,
             onSubmitted: onSubmitted,
             textInputAction: textInputAction,
             style: textStyle,
+
             inputFormatters: inputFormatters,
+            validator:
+            FormBuilderValidators.compose([
+              if(isRequired==true)
+                FormBuilderValidators.required(errorText: 'This Field is Required'),
+              if(isvalidemail==true)
+                FormBuilderValidators.email(errorText: 'Invalid Email Format'),
+            ]),
             decoration: InputDecoration(
               hintText: hintText,
               prefixIcon: prefixIcon,
-              suffixIcon: suffixIcon != null
+              suffixIcon: isPassword?
+              Container(
+                margin: const EdgeInsets.only(right: 10),
+                child: IconButton(
+                  icon: _showPasswordNotifier.value
+                      ? Image.asset(
+                    AssetsPath.eye_on_icon,
+                    color: AppColors.gray,
+                  )
+                      : Image.asset(
+                    AssetsPath.eye_off_icon,
+                    color: AppColors.gray,
+                  ),
+                  onPressed: () {
+                    _showPasswordNotifier.value =
+                    !_showPasswordNotifier.value;
+                  },
+                ),
+              )
+                  :suffixIcon != null
                   ? GestureDetector(
                 onTap: onSuffixTap,
                 child: suffixIcon,
@@ -124,7 +164,7 @@ class CustomTextField extends StatelessWidget {
                   width: borderWidth,
                 ),
               ),
-            ),
+            ), name: '',
           ),
         ),
 
@@ -151,6 +191,6 @@ class CustomTextField extends StatelessWidget {
           ),
         ],
       ],
-    );
+    );});
   }
 }

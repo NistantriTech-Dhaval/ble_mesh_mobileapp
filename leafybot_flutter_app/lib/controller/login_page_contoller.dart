@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:leafybot_flutter_app/constant/appColors.dart';
@@ -19,6 +20,7 @@ class LoginController extends GetxController {
   var countryCode = "+91".obs;
   var phoneNumber = "".obs;
   RxInt secondsRemaining = 60.obs;
+  final GlobalKey<FormBuilderState> formKey = GlobalKey<FormBuilderState>();
   // Text controller
   final phoneController = TextEditingController();
   final otpController = TextEditingController();
@@ -94,7 +96,10 @@ class LoginController extends GetxController {
       );
       await Preferences.setString(LeafPreferences.accessToken, response.token);
       await Preferences.setString(LeafPreferences.userId, response.userId);
-      await Preferences.setString(LeafPreferences.phoneNumber, response.phoneNumber,);
+      await Preferences.setString(
+        LeafPreferences.phoneNumber,
+        response.phoneNumber,
+      );
 
       Get.dialog(
         SuccessPopup(
@@ -105,7 +110,7 @@ class LoginController extends GetxController {
           onButtonPressed: () {
             Get.back();
             if (response.isProfileComplete == true) {
-              Get.offAll(MainScreen());
+              Get.offAll(ProfilePage());
             } else {
               Get.offAll(ProfilePage());
             }
@@ -146,26 +151,16 @@ class LoginController extends GetxController {
     final name = fullNameController.text.trim();
     final email = emailController.text.trim();
     try {
-      if (!isValidEmail(email)) {
-        AppSnackBar.show("error", "Please enter a valid email");
-        return;
-      }
-      final response = await AuthRepository.updateProfile(name, email);
-      if(response.success==true){
-        Get.to(WelcomePage());
+      if (formKey.currentState!.validate()) {
+        final response = await AuthRepository.updateProfile(name, email);
+        if (response.success == true) {
+          Get.to(WelcomePage());
+        }
       }
     } catch (e) {
       // ❌ Handle exceptions like network error, parsing error
       AppSnackBar.show("Error", e.toString());
     }
-  }
-
-  bool isValidEmail(String email) {
-    if (email.isEmpty) return false;
-    final emailRegex = RegExp(
-      r"^[a-zA-Z0-9.a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
-    );
-    return emailRegex.hasMatch(email);
   }
 
   @override

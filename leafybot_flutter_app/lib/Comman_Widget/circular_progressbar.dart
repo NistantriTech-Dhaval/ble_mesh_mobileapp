@@ -5,12 +5,14 @@ import 'package:leafybot_flutter_app/constant/appColors.dart';
 class CircularProgressLoader extends StatelessWidget {
   final double size; // diameter of the circle
   final Color? color; // color of the loader
+  final Color? backgroundcolor; // color of the loader
   final double strokeWidth; // thickness of the circle
 
   const CircularProgressLoader({
     Key? key,
     this.size = 24,
     this.color,
+    this.backgroundcolor = AppColors.white,
     this.strokeWidth = 3.0,
   }) : super(key: key);
 
@@ -23,6 +25,7 @@ class CircularProgressLoader extends StatelessWidget {
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: strokeWidth,
+            backgroundColor: backgroundcolor,
             valueColor: AlwaysStoppedAnimation<Color>(
               color ?? AppColors.green,
             ),
