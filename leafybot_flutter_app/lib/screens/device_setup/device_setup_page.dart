@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/controller/device_setup_controller.dart';
 import 'package:leafybot_flutter_app/screens/device_setup/soil_type_page.dart';
@@ -7,7 +8,9 @@ import 'loaction_setup_page.dart';
 import 'plant_setup_page.dart';
 
 class DeviceSetupPage extends StatelessWidget {
-  const DeviceSetupPage({super.key});
+  final DiscoveredDevice device;
+
+  const DeviceSetupPage({super.key,    required this.device,});
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +46,11 @@ class DeviceSetupPage extends StatelessWidget {
               CustomButton(
                 text: "Continue",
                 onPressed: setupController.currentStep.value != null
-                    ? setupController.onContinue
+                    ? (){setupController.onContinue(device);}
                     : () {},
               ),
               const SizedBox(height: 18),
-              GestureDetector(onTap:setupController.onContinue, child: Text(
+              GestureDetector(onTap:(){setupController.onContinue(device);}, child: Text(
                 "Skip",
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   fontSize: 14,

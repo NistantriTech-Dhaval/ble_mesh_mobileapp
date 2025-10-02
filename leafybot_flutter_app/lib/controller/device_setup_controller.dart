@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/models/plant_location_model.dart';
 import 'package:leafybot_flutter_app/models/soil_type_model.dart';
@@ -74,11 +75,11 @@ class DeviceSetupController extends GetxController {
     }
   }
 
-  void onContinue() {
+  void onContinue(   DiscoveredDevice device) {
     if (currentStep.value < 2) {
       currentStep.value++;
     } else {
-      Get.to(ProvisionedDevicesPage());
+      Get.to(ProvisionedDevicesPage(device: device,));
     }
   }
 

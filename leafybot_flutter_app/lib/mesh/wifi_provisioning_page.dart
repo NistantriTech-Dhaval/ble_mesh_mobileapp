@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:leafybot_flutter_app/constant/assets_path.dart';
@@ -12,7 +13,9 @@ import '../constant/appColors.dart';
 import '../controller/mesh_controller.dart';
 
 class WifiProvisioningPage extends StatefulWidget {
-  const WifiProvisioningPage({Key? key}) : super(key: key);
+  final DiscoveredDevice device;
+  int selected_mesh_option;
+   WifiProvisioningPage({Key? key,required this.device,required this.selected_mesh_option}) : super(key: key);
 
   @override
   State<WifiProvisioningPage> createState() => _WifiProvisioningPageState();
@@ -152,7 +155,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                             CustomButton(
                               text: "Retry",
                               onPressed: () async {
-                                await controller.connectWithNode();
+                                await controller.connectWithNode(widget.device,widget.selected_mesh_option);
                               },
                             ),
                           ]
@@ -453,7 +456,8 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                       if (controller.formKey.currentState!.validate()) {
                         Get.back();
                         controller.selectedWifi.value = deviceName;
-                        await controller.connectWithNode();
+                        await controller.connectWithNode(widget.device,widget.selected_mesh_option);
+                        controller.password_controller.clear();
                       }
                     },
                   ),

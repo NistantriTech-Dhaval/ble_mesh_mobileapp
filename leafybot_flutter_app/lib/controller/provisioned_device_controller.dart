@@ -23,6 +23,7 @@ class ProvisionedDeviceController extends GetxController {
   final meshController = Get.find<MeshController>();
   final isScanning = false.obs;
   final password_controller = TextEditingController();
+  final FlutterReactiveBle flutterReactiveBle = FlutterReactiveBle();
   var wifiList = <String>[
     "Nothing",
     "Airtel_NTPL",
@@ -61,70 +62,116 @@ class ProvisionedDeviceController extends GetxController {
   }
 
   Future<void> scanWifi() async {}
-  Future<void> connectWithNode() async {
+  Future<void> connectWithNode(DiscoveredDevice device, mesh_optionn) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
-    final List<DiscoveredDevice> scannedDevices = [];
-
-    StreamSubscription<DiscoveredDevice>? subscription;
 
     try {
-      // Start scan
-      subscription = meshController.nordicNrfMesh.scanForProxy().listen(
-        (device) {
-          if (scannedDevices.every((d) => d.id != device.id)) {
-            scannedDevices.add(device);
-          }
-        },
-        onError: (err) {
-          debugPrint("Scan error: $err");
-        },
-      );
+      if (mesh_optionn == 1) {
+        meshController.bleMeshManager.callbacks =
+            DoozProvisionedBleMeshManagerCallbacks(
+              _meshManagerApi,
+              meshController.bleMeshManager,
+            );
+        await meshController.bleMeshManager.disconnect();
 
-      // Wait a few seconds for devices
-      await Future.delayed(const Duration(seconds: 5));
-      await subscription.cancel();
-
-      if (scannedDevices.isEmpty) {
-        isWifiProvisioning.value = false;
-        throw Exception("No provisioned device found");
+        await meshController.bleMeshManager.connect(
+          device,
+          connectionTimeout: const Duration(seconds: 10),
+        );
+        await meshProvisioning(device, mesh_optionn);
+      } else {
+        await flutterReactiveBle.connectToDevice(
+          id: device.id,
+          connectionTimeout: Duration(seconds: 10),
+        );
+        await wifiProvisioning(device, mesh_optionn);
       }
-
-      // Pick device with strongest RSSI
-      final bestDevice = scannedDevices.reduce(
-        (a, b) => a.rssi > b.rssi ? a : b,
-      );
-
-      debugPrint(
-        "Best device: ${bestDevice.name ?? bestDevice.id} RSSI=${bestDevice.rssi}",
-      );
-
-      // Setup callbacks
-      meshController.bleMeshManager.callbacks =
-          DoozProvisionedBleMeshManagerCallbacks(
-            _meshManagerApi,
-            meshController.bleMeshManager,
-          );
-
-      // Disconnect previous (if any)
-      await meshController.bleMeshManager.disconnect();
-
-      await meshController.bleMeshManager.connect(
-        bestDevice,
-        connectionTimeout: const Duration(seconds: 10),
-      );
-      // Start provisioning
-      await wifiProvisioning();
     } catch (e, st) {
       wifiConnectionFailed.value = true;
       debugPrint("connectWithNode error: $e\n$st");
     } finally {
-      await subscription?.cancel();
       isWifiProvisioning.value = false;
     }
   }
 
-  Future<void> wifiProvisioning() async {
+  Future<void> wifiProvisioning(DiscoveredDevice device, mesh_optionn) async {
+    try {
+      print("✅ Connected! Discovering services...");
+      final services = await flutterReactiveBle.discoverServices(device.id);
+      // 1. Print all services
+      for (var s in services) {
+        print("Service: ${s.serviceId}");
+      }
+      var customService;
+      if (Platform.isIOS) {
+        // 2. Find your custom service (0x00FF)
+        customService = services.firstWhere(
+          (s) => s.serviceId.toString() == "00ff",
+        );
+      } else if (Platform.isAndroid) {
+        customService = services.firstWhere(
+          (s) =>
+              s.serviceId.toString() == "000000ff-0000-1000-8000-00805f9b34fb",
+        );
+      }
+      if (customService == null) {
+        throw Exception("Custom service not found");
+      }
+      print("Found Custom Service: ${customService.serviceId}");
+
+      // 3. Iterate characteristics
+      for (var c in customService.characteristics) {
+        final qChar = QualifiedCharacteristic(
+          deviceId: device.id,
+          serviceId: c.serviceId,
+          characteristicId: c.characteristicId,
+        );
+        if (c.characteristicId.toString().toLowerCase().contains("ff03")) {
+          Map<String, dynamic> payloadMap = {};
+          if (mesh_optionn == 1) {
+            final devicesJson = await _syncProvisionedDevices();
+            payloadMap = {
+              "config": {
+                "ssid": selectedWifi.value,
+                "password": password_controller.text,
+                "isgateway": true, // adjust as needed
+                "network_info": devicesJson,
+                "type":1
+              },
+            };
+          } else {
+            payloadMap = {
+              "config": {
+                "ssid": selectedWifi.value,
+                "password": password_controller.text,
+                "type":2
+              },
+            };
+          }
+          final payloadJson = jsonEncode(payloadMap);
+          final payloadBytes = utf8.encode(payloadJson).toList();
+
+          await flutterReactiveBle.writeCharacteristicWithResponse(
+            qChar,
+            value: payloadBytes,
+          );
+          wifistatusText.value = "Connected to";
+          await Future.delayed(Duration(seconds: 7));
+          Get.offAll(MainScreen());
+        }
+      }
+    } catch (e) {
+      wifiConnectionFailed.value = true;
+      print("❌ Service discovery or provisioning failed: $e");
+      AppSnackBar.show("error", "WiFi provisioning failed: $e");
+    } finally {
+      await meshController.bleMeshManager.disconnect();
+      wifiConnectionFailed.value = false;
+    }
+  }
+
+  Future<void> meshProvisioning(DiscoveredDevice device, mesh_optionn) async {
     try {
       final elements = await selectedNode!.elements;
       const groupAddress = 0xC000;
@@ -158,44 +205,8 @@ class ProvisionedDeviceController extends GetxController {
               "Subscribed model ${model.modelId} to group $groupAddress",
             );
           }
-
-          // Handle Vendor Model for WiFi provisioning
-          final id = model.modelId;
-          if ((Platform.isIOS && id == 0x0001) ||
-              (Platform.isAndroid && id == 48562177)) {
-            debugPrint("Vendor model found — sending WiFi credentials...");
-
-            final devicesJson = await _syncProvisionedDevices();
-
-            final payloadMap = {
-              "ssid": selectedWifi.value,
-              "password": password_controller.text,
-              "isgateway": true, // adjust as needed
-              "network_info": devicesJson,
-            };
-
-            final payloadJson = jsonEncode(payloadMap);
-            final payloadBytes = utf8.encode(payloadJson).toList();
-            await _meshManagerApi
-                .sendVendorMessage(
-                  address: element.address,
-                  modelName: "VendorModel",
-                  modelId: 0x0001,
-                  companyId: 0x02E5,
-                  opCode: 0xC0,
-                  keyIndex: 0,
-                  parameters: payloadBytes,
-            );
-                // ).timeout(
-                //   Duration(seconds: 10),
-                //   onTimeout: () async {
-                //     return true;
-                //   },
-                // );
-            wifistatusText.value = "Connected to";
-            await Future.delayed(Duration(seconds: 5));
-            Get.offAll(MainScreen());
-          }
+          await Future.delayed(Duration(seconds: 2));
+          await wifiProvisioning(device, mesh_optionn);
         }
       }
     } catch (e, st) {

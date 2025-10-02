@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_button.dart';
@@ -13,7 +14,9 @@ import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class ProvisionedDevicesPage extends StatefulWidget {
-  const ProvisionedDevicesPage({Key? key}) : super(key: key);
+  final DiscoveredDevice device;
+
+  const ProvisionedDevicesPage({Key? key,required this.device}) : super(key: key);
 
   @override
   State<ProvisionedDevicesPage> createState() =>
@@ -181,7 +184,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                     ),
                                     onPressed: () {
                                       controller.selectedNode=node;
-                                      Get.to(WifiProvisioningPage());
+                                      Get.to(WifiProvisioningPage(device: widget.device,selected_mesh_option: 1));
                                       // your action
                                     },
                                     label: const Text(

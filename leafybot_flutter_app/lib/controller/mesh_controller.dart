@@ -277,7 +277,7 @@ class MeshController extends GetxController {
         // Wait 2 seconds then navigate
         await Future.delayed(const Duration(seconds: 5));
         // Navigate directly using GetX
-        Get.to(DeviceSetupPage());
+        Get.to(DeviceSetupPage(device: device,));
         isProvisioning.value = false;
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);

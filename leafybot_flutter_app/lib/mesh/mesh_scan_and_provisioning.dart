@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:leafybot_flutter_app/constant/assets_path.dart';
 import 'package:leafybot_flutter_app/controller/mesh_controller.dart';
+import 'package:leafybot_flutter_app/mesh/wifi_provisioning_page.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 
 import '../Comman_Widget/app_bar.dart';
@@ -14,7 +15,8 @@ import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class ScanningAndProvisioning extends StatefulWidget {
-  const ScanningAndProvisioning({Key? key}) : super(key: key);
+  int selected_mesh_option;
+   ScanningAndProvisioning({Key? key,required this.selected_mesh_option}) : super(key: key);
 
   @override
   State<ScanningAndProvisioning> createState() =>
@@ -208,52 +210,11 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                               final device = devices[i];
                               return GestureDetector(
                                 onTap: () async {
-                                  // Connect first
-                                  final connection =await flutterReactiveBle.connectToDevice(
-                                    id: device.id, // empty = discover all
-                                    connectionTimeout: const Duration(seconds: 5),
-                                  ).listen((connectionState) {
-                                    print("Device state: ${connectionState.connectionState}");
-                                  });
-                                  final services = await flutterReactiveBle.discoverServices(device.id);
-
-                                  // 2. Find service 0x00FF
-                                  final customService = services.firstWhere(
-                                        (s) => s.serviceId.toString().toLowerCase().contains("0000ff"),
-                                  );
-
-                                  print("Found Custom Service: ${customService.serviceId}");
-
-                                  // 3. Iterate characteristics
-                                  for (var c in customService.characteristics) {
-                                    print("Characteristic: ${c.characteristicId}");
-                                    print("   Properties: "
-                                        "${c.isReadable ? 'Read ' : ''}"
-                                        "${c.isWritableWithResponse ? 'Write ' : ''}"
-                                        "${c.isNotifiable ? 'Notify ' : ''}");
-                                    final qChar = QualifiedCharacteristic(
-                                        deviceId: device.id,                 // <-- your connected deviceId
-                                        serviceId: c.serviceId,              // <-- service UUID from discovery
-                                        characteristicId: c.characteristicId // <-- characteristic UUID from discovery
-                                    );
-
-                                    // ---- READ from 0xFF02 ----
-                                    if (c.characteristicId.toString().toLowerCase().contains("ff02")) {
-                                      final response = await flutterReactiveBle.readCharacteristic(qChar);
-                                      print("Read from FF02: ${utf8.decode(response)}");
-                                    }
-
-                                    // ---- WRITE to 0xFF03 ----
-                                    if (c.characteristicId.toString().toLowerCase().contains("ff03")) {
-                                      final jsonString = '{"cmd":"turn_on","value":1}';
-                                      await flutterReactiveBle.writeCharacteristicWithResponse(
-                                        qChar,
-                                        value: utf8.encode(jsonString),
-                                      );
-                                      print("Written to FF03: $jsonString");
-                                    }
+                                  if(widget.selected_mesh_option==1){
+                                    controller.provisionDevice(device, context);
+                                  }else{
+                                    Get.to(WifiProvisioningPage(device: device,selected_mesh_option: widget.selected_mesh_option,));
                                   }
-                                  // meshcontroller.provisionDevice(device, context);
 
                                 },
                                 child: Container(
