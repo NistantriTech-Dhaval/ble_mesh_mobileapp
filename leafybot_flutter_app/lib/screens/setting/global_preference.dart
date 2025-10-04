@@ -5,7 +5,6 @@ import 'package:leafybot_flutter_app/utils/consstant_utils.dart';
 import '../../Comman_Widget/app_bar.dart';
 import '../../Comman_Widget/custom_button.dart';
 import '../../constant/appColors.dart';
-import '../../constant/assets_path.dart';
 import '../../controller/global_preference_controller.dart';
 
 class GlobalPreferencesPage extends StatelessWidget {
@@ -126,7 +125,7 @@ class GlobalPreferencesPage extends StatelessWidget {
                                       Expanded(
                                         child: Text(
                                           controller.formatDuration(
-                                            goal ?? Duration(),
+                                            goal ,
                                           ),
                                           style: Theme.of(context)
                                               .textTheme

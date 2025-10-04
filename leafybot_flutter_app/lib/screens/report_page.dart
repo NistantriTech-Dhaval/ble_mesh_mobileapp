@@ -6,7 +6,6 @@ import 'package:leafybot_flutter_app/constant/appColors.dart';
 import 'package:leafybot_flutter_app/constant/assets_path.dart';
 import 'package:leafybot_flutter_app/utils/consstant_utils.dart';
 import '../Comman_Widget/main_app_bar.dart';
-import '../controller/home_page_controller.dart';
 import '../controller/report_page_controller.dart';
 import 'package:intl/intl.dart';
 
@@ -422,7 +421,7 @@ class ReportPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context!).cardColor,
+        color: Theme.of(context).cardColor,
         border: Border.all(color: AppColors.grayLight, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),

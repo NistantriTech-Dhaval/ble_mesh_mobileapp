@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/constant/appColors.dart';
 import 'package:leafybot_flutter_app/screens/splashScreen.dart';
-import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
-
 import 'controller/theme_controller.dart';
 
 void main() {
@@ -17,8 +15,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeController = Get.find<ThemeController>();
-    late final NordicNrfMesh nordicNrfMesh = NordicNrfMesh();
-
     return   Obx(
             () =>GetMaterialApp(
       debugShowCheckedModeBanner: false,

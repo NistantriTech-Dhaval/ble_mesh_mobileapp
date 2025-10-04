@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/mesh/mesh_scan_and_provisioning.dart';
 import '../../Comman_Widget/app_bar.dart';
 import '../../Comman_Widget/custom_button.dart';
-import '../../constant/assets_path.dart';
 import '../Comman_Widget/custom_snackbar.dart';
 import '../constant/appColors.dart';
 

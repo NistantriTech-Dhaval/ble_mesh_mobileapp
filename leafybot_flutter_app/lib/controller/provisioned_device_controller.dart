@@ -24,13 +24,7 @@ class ProvisionedDeviceController extends GetxController {
   final isScanning = false.obs;
   final password_controller = TextEditingController();
   final FlutterReactiveBle flutterReactiveBle = FlutterReactiveBle();
-  var wifiList = <String>[
-    "Nothing",
-    "Airtel_NTPL",
-    "Office_WiFi",
-    "Cafe_Free_WiFi",
-    "Neighbor_WiFi",
-  ].obs;
+  var wifiList = <String>[].obs;
   RxString selectedWifi = "".obs;
   final isWifiProvisioning = false.obs;
   final wifiConnectionFailed = false.obs;
@@ -61,7 +55,132 @@ class ProvisionedDeviceController extends GetxController {
     nodes.assignAll(loadedNodes);
   }
 
-  Future<void> scanWifi() async {}
+  Future<void> scanWifiList(DiscoveredDevice device) async {
+    if (isScanning.value == false) {
+      isScanning.value = true;
+      wifiList.clear();
+      StreamSubscription<ConnectionStateUpdate>? connection;
+
+      try {
+        connection = flutterReactiveBle
+            .connectToDevice(
+              id: device.id,
+              connectionTimeout: const Duration(seconds: 10),
+            )
+            .listen((connectionState) async {
+              switch (connectionState.connectionState) {
+                case DeviceConnectionState.connecting:
+                  print("⏳ Connecting...");
+                  break;
+
+                case DeviceConnectionState.connected:
+                  print("✅ Connected! Discovering services...");
+                  await Future.delayed(const Duration(milliseconds: 300));
+
+                  try {
+                    final services = await flutterReactiveBle.discoverServices(
+                      device.id,
+                    );
+
+                    // Print all services
+                    for (var s in services) {
+                      print("Service: ${s.serviceId}");
+                    }
+
+                    DiscoveredService? customService;
+
+                    try {
+                      customService = services.firstWhere(
+                        (s) => Platform.isIOS
+                            ? s.serviceId.toString().toLowerCase() == "00ff"
+                            : s.serviceId.toString().toLowerCase() ==
+                                  "000000ff-0000-1000-8000-00805f9b34fb",
+                      );
+                    } catch (e) {
+                      final msg = "Custom service not found!";
+                      print("❌ $msg");
+                      AppSnackBar.show("error", msg);
+                      return; // exit if not found
+                    }
+                    print("Found Custom Service: ${customService.serviceId}");
+
+                    // Iterate characteristics
+                    for (var c in customService.characteristics) {
+                      if (c.characteristicId.toString().toLowerCase() ==
+                          "0000ff02-0000-1000-8000-00805f9b34fb"||c.characteristicId.toString().toLowerCase() ==
+                          "ff02") {
+                        final qChar = QualifiedCharacteristic(
+                          deviceId: device.id,
+                          serviceId: c.serviceId,
+                          characteristicId: c.characteristicId,
+                        );
+
+                        List<int> wifiData = [];
+                        bool done = false;
+                        while (!done) {
+                          try {
+                            final value = await flutterReactiveBle
+                                .readCharacteristic(qChar).timeout(Duration(seconds: 5));
+                            if (value.isEmpty) {
+                              done = true;
+                              break;
+                            }
+
+                            int remaining = value[0];
+                            wifiData.addAll(value.sublist(1));
+
+                            if (remaining == 0) done = true;
+
+                            await Future.delayed(
+                              const Duration(milliseconds: 100),
+                            );
+                          } catch (e) {
+                            final msg = "Error reading characteristic: $e";
+                            print("❌ $msg");
+                            AppSnackBar.show("error", msg);
+                            done = true;
+                          }
+                        }
+
+                        // Convert to string
+                        String wifiString = String.fromCharCodes(
+                          wifiData.sublist(1, wifiData.length - 1),
+                        );
+
+                        print("Full Wi-Fi string:\n$wifiString");
+
+                        // Split into SSIDs
+                        wifiList.value = wifiString.split(',');
+                        isScanning.value = false;
+                        await connection?.cancel();
+                      }
+                    }
+                  } catch (e) {
+                    final msg = "Service discovery failed: $e";
+                    print("❌ $msg");
+                    AppSnackBar.show("error", msg);
+                  }
+
+                  break;
+
+                case DeviceConnectionState.disconnected:
+                  print("❌ Disconnected");
+                  isScanning.value = false;
+                  await connection?.cancel();
+                  break;
+
+                default:
+                  break;
+              }
+            });
+      } catch (e) {
+        final msg = "Connection error: $e";
+        print("❌ $msg");
+        AppSnackBar.show("error", msg);
+      }
+    }
+  }
+
   Future<void> connectWithNode(DiscoveredDevice device, mesh_optionn) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
@@ -80,18 +199,39 @@ class ProvisionedDeviceController extends GetxController {
           connectionTimeout: const Duration(seconds: 10),
         );
         await meshProvisioning(device, mesh_optionn);
-      } else {
-        await flutterReactiveBle.connectToDevice(
-          id: device.id,
-          connectionTimeout: Duration(seconds: 10),
-        );
         await wifiProvisioning(device, mesh_optionn);
+      } else {
+        // --- Non-mesh path ---
+        print("Start Bluetooth connection");
+
+        // listen to connection state
+        flutterReactiveBle
+            .connectToDevice(
+              id: device.id,
+              connectionTimeout: const Duration(seconds: 10),
+            )
+            .listen((connectionState) async {
+              switch (connectionState.connectionState) {
+                case DeviceConnectionState.connecting:
+                  print("⏳ Connecting...");
+                  break;
+                case DeviceConnectionState.connected:
+                  print("✅ Connected! Discovering services...");
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  await wifiProvisioning(device, mesh_optionn);
+                  break;
+                case DeviceConnectionState.disconnected:
+                  print("❌ Disconnected");
+                  break;
+
+                default:
+                  break;
+              }
+            });
       }
     } catch (e, st) {
       wifiConnectionFailed.value = true;
       debugPrint("connectWithNode error: $e\n$st");
-    } finally {
-      isWifiProvisioning.value = false;
     }
   }
 
@@ -127,7 +267,9 @@ class ProvisionedDeviceController extends GetxController {
           serviceId: c.serviceId,
           characteristicId: c.characteristicId,
         );
-        if (c.characteristicId.toString().toLowerCase().contains("ff03")) {
+        if (c.characteristicId.toString().toLowerCase() ==
+            "0000ff03-0000-1000-8000-00805f9b34fb"||c.characteristicId.toString().toLowerCase() ==
+            "ff03") {
           Map<String, dynamic> payloadMap = {};
           if (mesh_optionn == 1) {
             final devicesJson = await _syncProvisionedDevices();
@@ -137,7 +279,7 @@ class ProvisionedDeviceController extends GetxController {
                 "password": password_controller.text,
                 "isgateway": true, // adjust as needed
                 "network_info": devicesJson,
-                "type":1
+                "type": 1,
               },
             };
           } else {
@@ -145,7 +287,7 @@ class ProvisionedDeviceController extends GetxController {
               "config": {
                 "ssid": selectedWifi.value,
                 "password": password_controller.text,
-                "type":2
+                "type": 2,
               },
             };
           }
@@ -164,10 +306,10 @@ class ProvisionedDeviceController extends GetxController {
     } catch (e) {
       wifiConnectionFailed.value = true;
       print("❌ Service discovery or provisioning failed: $e");
-      AppSnackBar.show("error", "WiFi provisioning failed: $e");
+      password_controller.clear();
     } finally {
       await meshController.bleMeshManager.disconnect();
-      wifiConnectionFailed.value = false;
+      isWifiProvisioning.value = false;
     }
   }
 
@@ -206,20 +348,17 @@ class ProvisionedDeviceController extends GetxController {
             );
           }
           await Future.delayed(Duration(seconds: 2));
-          await wifiProvisioning(device, mesh_optionn);
         }
       }
     } catch (e, st) {
       wifiConnectionFailed.value = true;
       debugPrint("wifiProvisioning error: $e\n$st");
-      AppSnackBar.show("error", "WiFi provisioning failed: $e");
-    } finally {
-      isWifiProvisioning.value = false;
     }
   }
 
   Future<String> _syncProvisionedDevices() async {
     if (nodes.isEmpty) {
+      wifiConnectionFailed.value = true;
       isWifiProvisioning.value = false;
       debugPrint("No provisioned devices found.");
       return jsonEncode({}); // Return empty JSON object if no devices

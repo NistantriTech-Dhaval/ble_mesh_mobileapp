@@ -297,7 +297,7 @@ class HomeScreen extends StatelessWidget {
               ),
               if (subtitle != null)
                 Text(
-                  subtitle!,
+                  subtitle,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontSize: 12,
                     letterSpacing: 0,

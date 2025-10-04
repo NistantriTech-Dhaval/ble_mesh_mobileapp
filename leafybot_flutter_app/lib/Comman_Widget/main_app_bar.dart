@@ -1,5 +1,3 @@
-import 'dart:ffi' hide Size;
-
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -78,7 +76,7 @@ class CustomMainAppBar extends StatelessWidget implements PreferredSizeWidget {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton2<String>(
                         isExpanded: true,
-                        value: selectedBot?.value["name"], // ✅ ensure correct type
+                        value: selectedBot?["name"], // ✅ ensure correct type
                         dropdownStyleData: DropdownStyleData(
                           width: Get.width * 0.5,
                           offset: const Offset(-15, -2),

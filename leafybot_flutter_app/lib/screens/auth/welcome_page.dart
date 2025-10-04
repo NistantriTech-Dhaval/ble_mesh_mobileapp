@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
-import 'package:leafybot_flutter_app/constant/appColors.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_button.dart';
 import 'package:leafybot_flutter_app/mesh/leafy_device_count_page.dart';
-import 'package:leafybot_flutter_app/mesh/mesh_scan_and_provisioning.dart';
-import 'package:leafybot_flutter_app/screens/device_setup/plant_setup_page.dart';
-
 import '../../Comman_Widget/app_bar.dart';
 import '../../constant/assets_path.dart';
-import '../device_setup/device_setup_page.dart';
 
 class WelcomePage extends StatelessWidget {
   const WelcomePage({Key? key}) : super(key: key);

@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:leafybot_flutter_app/models/plant_species_model.dart';
 import 'package:leafybot_flutter_app/models/soil_type_model.dart';
 import 'package:leafybot_flutter_app/utils/url_utils.dart';
-import '../models/login_response.dart';
 import '../models/plant_location_model.dart';
 import '../utils/sharedPrefrenceUtils.dart';
 class PlantRepository {

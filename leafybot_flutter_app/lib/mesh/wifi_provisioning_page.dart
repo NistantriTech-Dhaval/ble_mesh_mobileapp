@@ -10,7 +10,6 @@ import '../Comman_Widget/circular_progressbar.dart';
 import '../Comman_Widget/custom_button.dart';
 import '../Comman_Widget/custom_textfield.dart' show CustomTextField;
 import '../constant/appColors.dart';
-import '../controller/mesh_controller.dart';
 
 class WifiProvisioningPage extends StatefulWidget {
   final DiscoveredDevice device;
@@ -28,6 +27,12 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      fetchWifiList();
+    });
+  }
+  fetchWifiList() async {
+   await controller.scanWifiList(widget.device);
   }
 
   @override
@@ -238,7 +243,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                         ),
                       ),
                       trailing: GestureDetector(
-                        onTap: () async => controller.scanWifi(),
+                        onTap: () async {await controller.scanWifiList(widget.device);},
                         child: Image.asset(
                           AssetsPath.sync_Icon,
                           height: 24,
@@ -248,10 +253,10 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                     ),
                     Expanded(
                       child: RefreshIndicator(
-                        onRefresh: () {
+                        onRefresh: () async {
                           if (controller.isScanning.value)
                             return Future.value();
-                          return controller.scanWifi();
+                          return await controller.scanWifiList(widget.device);
                         },
                         child: Obx(() {
                           final devices = controller.wifiList;
@@ -294,6 +299,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                               left: 24,
                               right: 24,
                               top: 10,
+                              bottom: 34
                             ),
                             physics: const AlwaysScrollableScrollPhysics(),
                             itemCount: devices.length,
@@ -457,7 +463,6 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                         Get.back();
                         controller.selectedWifi.value = deviceName;
                         await controller.connectWithNode(widget.device,widget.selected_mesh_option);
-                        controller.password_controller.clear();
                       }
                     },
                   ),

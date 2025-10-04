@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 
 import '../../Comman_Widget/app_bar.dart';
 import '../../Comman_Widget/custom_button.dart';
-import '../../Comman_Widget/custom_snackbar.dart';
 import '../../Comman_Widget/custom_textfield.dart';
 import '../../constant/appColors.dart';
 import '../../constant/assets_path.dart';

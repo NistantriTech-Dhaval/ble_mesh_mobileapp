@@ -15,7 +15,7 @@ class ThemeController extends GetxController {
 
   /// Load saved theme from SharedPreferences
   Future<void> loadTheme() async {
-    final savedTheme = await Preferences.getBool(LeafPreferences.isDarkMode) ?? false;
+    final savedTheme = await Preferences.getBool(LeafPreferences.isDarkMode);
     isDarkMode.value = savedTheme;
     Get.changeThemeMode(theme); // Apply theme on app start
   }

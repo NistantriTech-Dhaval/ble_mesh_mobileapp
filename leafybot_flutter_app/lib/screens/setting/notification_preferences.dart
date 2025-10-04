@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/app_bar.dart';
 import 'package:leafybot_flutter_app/constant/appColors.dart';
-import 'package:leafybot_flutter_app/constant/assets_path.dart';
 
 class NotificationPreferences extends StatelessWidget {
   NotificationPreferences({super.key});

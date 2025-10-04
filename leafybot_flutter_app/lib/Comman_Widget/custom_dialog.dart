@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_button.dart';
 
-import '../constant/appColors.dart';
-
 class SuccessPopup extends StatelessWidget {
   final String title;
   final String message;

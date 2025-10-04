@@ -13,8 +13,8 @@ class LeafyDeviceCountPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    RxInt selected_leafybot_count = (-1).obs;
-    RxInt selected_leafystick_count = (-1).obs;
+    RxInt selected_leafybot_count = 0.obs;
+    RxInt selected_leafystick_count = 0.obs;
 
     return Scaffold(
       appBar: const CustomAppBar(
@@ -81,9 +81,7 @@ class LeafyDeviceCountPage extends StatelessWidget {
   Widget _numberDropdownWidget(BuildContext context, RxInt selected_number) {
     return Obx(() {
       RxBool isOpen = false.obs;
-      String displayText = selected_number.value <= 0
-          ? "Select number"
-          : selected_number.value.toString();
+      String displayText =  selected_number.value.toString();
 
       return Container(
         height: 48,

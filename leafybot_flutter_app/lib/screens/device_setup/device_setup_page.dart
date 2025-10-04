@@ -35,8 +35,7 @@ class DeviceSetupPage extends StatelessWidget {
             return  PlantSetupPage();
         }
       }),
-      bottomNavigationBar: Obx(
-            () => Container(
+      bottomNavigationBar: Container(
           color: Theme.of(context).scaffoldBackgroundColor,
           padding: const EdgeInsets.fromLTRB(24, 19, 24, 34),
           child: Column(
@@ -45,9 +44,7 @@ class DeviceSetupPage extends StatelessWidget {
             children: [
               CustomButton(
                 text: "Continue",
-                onPressed: setupController.currentStep.value != null
-                    ? (){setupController.onContinue(device);}
-                    : () {},
+                onPressed:(){setupController.onContinue(device);},
               ),
               const SizedBox(height: 18),
               GestureDetector(onTap:(){setupController.onContinue(device);}, child: Text(
@@ -61,7 +58,6 @@ class DeviceSetupPage extends StatelessWidget {
           ),
         ),
       ),
-    )
     );
   }
 }

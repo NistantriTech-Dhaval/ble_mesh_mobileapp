@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/app_bar.dart';
-import 'package:leafybot_flutter_app/constant/assets_path.dart';
-
 import '../../constant/appColors.dart';
 import '../../controller/notification_page_controller.dart';
 

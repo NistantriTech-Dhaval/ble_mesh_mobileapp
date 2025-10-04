@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:async';
-import 'package:app_settings/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart';
@@ -180,7 +179,7 @@ class MeshController extends GetxController {
           )
           .timeout(
             const Duration(seconds: 60),
-            onTimeout: () {
+            onTimeout: () async {
               print("Getting timeout error");
               AppSnackBar.show("error", "Provisioning failed");
               scanUnprovisioned(); // no need to await here
@@ -275,7 +274,7 @@ class MeshController extends GetxController {
         print("Provisioning is Completed");
         statusText.value = "Provisioning is Completed";
         // Wait 2 seconds then navigate
-        await Future.delayed(const Duration(seconds: 5));
+        await Future.delayed(const Duration(seconds: 6));
         // Navigate directly using GetX
         Get.to(DeviceSetupPage(device: device,));
         isProvisioning.value = false;

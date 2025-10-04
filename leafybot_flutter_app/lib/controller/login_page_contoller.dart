@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:leafybot_flutter_app/constant/appColors.dart';
 import 'package:leafybot_flutter_app/screens/auth/otp_verification.dart';
 import 'package:leafybot_flutter_app/screens/auth/profile_page.dart';
 import 'package:leafybot_flutter_app/screens/auth/welcome_page.dart';
-import 'package:leafybot_flutter_app/screens/main_screen.dart';
 import 'package:leafybot_flutter_app/utils/sharedPrefrenceUtils.dart';
 
 import '../Comman_Widget/custom_dialog.dart';
