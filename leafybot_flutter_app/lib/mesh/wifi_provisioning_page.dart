@@ -13,8 +13,8 @@ import '../constant/appColors.dart';
 
 class WifiProvisioningPage extends StatefulWidget {
   final String deviceId;
-  int selected_mesh_option;
-   WifiProvisioningPage({Key? key,required this.deviceId,required this.selected_mesh_option}) : super(key: key);
+  int deviceNetworkTypeId;
+   WifiProvisioningPage({Key? key,required this.deviceId,required this.deviceNetworkTypeId}) : super(key: key);
 
   @override
   State<WifiProvisioningPage> createState() => _WifiProvisioningPageState();
@@ -166,7 +166,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                             CustomButton(
                               text: "Retry",
                               onPressed: () async {
-                                await controller.connectWithNode(widget.deviceId,widget.selected_mesh_option);
+                                await controller.connectWithNode(widget.deviceId,widget.deviceNetworkTypeId);
                               },
                             ),
                           ]
@@ -468,7 +468,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                       if (controller.formKey.currentState!.validate()) {
                         Get.back();
                         controller.selectedWifi.value = deviceName;
-                        await controller.connectWithNode(widget.deviceId,widget.selected_mesh_option);
+                        await controller.connectWithNode(widget.deviceId,widget.deviceNetworkTypeId);
                       }
                     },
                   ),

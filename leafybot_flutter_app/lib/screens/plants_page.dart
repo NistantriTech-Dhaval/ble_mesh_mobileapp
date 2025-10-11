@@ -1,7 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:leafybot_flutter_app/Comman_Widget/custom_snackbar.dart';
 import 'package:leafybot_flutter_app/constant/appColors.dart';
 import 'package:leafybot_flutter_app/constant/assets_path.dart';
+import 'package:leafybot_flutter_app/mesh/leafy_device_count_page.dart';
+import 'package:leafybot_flutter_app/mesh/mesh_scan_and_provisioning.dart';
+import 'package:leafybot_flutter_app/models/pot_device_model.dart';
+import 'package:leafybot_flutter_app/repository/plantRepository.dart';
 import 'package:leafybot_flutter_app/screens/homeScreen.dart';
 import 'package:leafybot_flutter_app/utils/consstant_utils.dart';
 import '../../controller/plants_controller.dart';
@@ -36,12 +43,13 @@ class MyPlantsPage extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 return ListView.builder(
-                  itemCount: controller.plants.length,
+                  itemCount: controller.potDeviceList.length,
                   itemBuilder: (context, index) {
-                    final plant = controller.plants[index];
+                    final pot = controller.potDeviceList[index];
+                    Map<String ,dynamic> detaildata= json.decode(pot.nickName);
                     return GestureDetector(
                       onTap: (){
-                        Get.to(HomeScreen(selectedPlant: plant,isDetailPage:true ));
+                       // Get.to(HomeScreen(selectedPlant: pot,isDetailPage:true ));
                       },
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 16),
@@ -49,7 +57,7 @@ class MyPlantsPage extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Theme.of(context).cardColor,
                           border: Border.all(
-                            color: plant["status"]
+                            color: pot.isBlank.isBlank==false
                                 ? AppColors.green
                                 : AppColors.grayLight,
                             width: 1,
@@ -59,8 +67,8 @@ class MyPlantsPage extends StatelessWidget {
                         child: Row(
                           children: [
                             // ✅ Plant Image
-                            Image.asset(
-                              ConstantUtils.getPlantImage(plant["plantsName"]),
+                            Image.network(
+                             pot.imageUrl,
                               height: 70,
                               width: 70,
                               fit: BoxFit.contain,
@@ -78,7 +86,7 @@ class MyPlantsPage extends StatelessWidget {
                                     child: Row(
                                       children: [
                                         Text(
-                                          plant["name"],
+                                          detaildata["nickname"],
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleSmall
@@ -100,7 +108,7 @@ class MyPlantsPage extends StatelessWidget {
                                             height: 24,
                                           ),
                                           onPressed: () {
-                                            delete_plant(context);
+                                            delete_plant(context,pot);
                                           },
                                         ),
                                       ],
@@ -108,8 +116,8 @@ class MyPlantsPage extends StatelessWidget {
                                   ),
                                   Row(
                                     children: [
-                                      Text(
-                                        plant["deviceId"],
+                                    Expanded(child:   Text(
+                                        pot.deviceId,
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelSmall
@@ -118,13 +126,13 @@ class MyPlantsPage extends StatelessWidget {
                                               letterSpacing: 0,
                                               fontWeight: FontWeight.w400,
                                             ),
-                                      ),
+                                      )),
                                       const SizedBox(width: 6),
                                       Container(
                                         height: 8,
                                         width: 8,
                                         decoration: BoxDecoration(
-                                          color: plant["status"]
+                                          color: pot.isBlank==false
                                               ? AppColors.green
                                               : AppColors.red,
                                           shape: BoxShape.circle,
@@ -147,7 +155,7 @@ class MyPlantsPage extends StatelessWidget {
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        plant["room"],
+                                        pot.plantLocation,
                                         style: TextStyle(
                                           color: AppColors.green,
                                           fontSize: 12,
@@ -172,14 +180,16 @@ class MyPlantsPage extends StatelessWidget {
 
       // ✅ Floating Add Button
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          Get.to(LeafyDeviceCountPage());
+        },
         backgroundColor: AppColors.green,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
     );
   }
-  delete_plant(BuildContext context) {
+  delete_plant(BuildContext context,PotDeviceModel pot) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -268,8 +278,13 @@ class MyPlantsPage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            onPressed: () {
-                              // Unpair action
+                            onPressed: () async{
+                              Get.back();
+                            var response= await PlantRepository.deletePotDeviceByid(pot.deviceId);
+                            if(response==true){
+                              AppSnackBar.show("success", "Plant deleted Successfully");
+                              await controller.loadPotDeviceList();
+                            }
                             },
                             child: const Text(
                               "Remove from app",

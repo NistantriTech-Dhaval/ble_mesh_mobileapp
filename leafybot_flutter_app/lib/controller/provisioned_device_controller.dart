@@ -6,6 +6,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_snackbar.dart';
 import 'package:leafybot_flutter_app/models/pot_device_model.dart';
+import 'package:leafybot_flutter_app/screens/device_setup/device_setup_page.dart';
 import 'package:leafybot_flutter_app/screens/main_screen.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import '../mesh/mesh_scan_and_provisioning.dart';
@@ -54,7 +55,7 @@ class ProvisionedDeviceController extends GetxController {
       final pot_device = await PlantRepository.getAllPotDevices();
       potDeviceList.assignAll(pot_device);
     } catch (e) {
-      AppSnackBar.show("error", "Failed to load plant locations: $e");
+      AppSnackBar.show("error", "Failed to load Pots: $e");
     } finally {
       isScanning.value = false;
     }
@@ -194,7 +195,7 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  Future<void> connectWithNode(String deviceId, mesh_optionn) async {
+  Future<void> connectWithNode(String deviceId, deviceNetworkTypeId) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
     DiscoveredDevice? selectedDevice;
@@ -202,15 +203,33 @@ class ProvisionedDeviceController extends GetxController {
     StreamSubscription<DiscoveredDevice>? subscription;
 
     try {
-      subscription = meshController.nordicNrfMesh.scanForProxy().listen(
-            (device) {
-          if (device.id == deviceId) {
-            selectedDevice=device;
-          }},
-        onError: (err) {
-          debugPrint("Scan error: $err");
-        },
-      );
+      if(deviceNetworkTypeId==1) {
+        subscription = meshController.nordicNrfMesh.scanForProxy().listen(
+              (device) {
+            if (device.id == deviceId) {
+              selectedDevice = device;
+            }
+          },
+          onError: (err) {
+            debugPrint("Scan error: $err");
+          },
+        );
+      }else{
+        subscription = flutterReactiveBle.scanForDevices(
+          withServices: [],
+          scanMode: ScanMode.balanced,
+        ).listen(
+              (device) {
+            if (device.id == deviceId) {
+              selectedDevice = device;
+            }
+          },
+          onError: (err) {
+            debugPrint("BLE scan error: $err");
+          },
+        );
+
+      }
 
       // Wait a few seconds for devices
       await Future.delayed(const Duration(seconds: 5));
@@ -218,7 +237,7 @@ class ProvisionedDeviceController extends GetxController {
       if (selectedDevice == null) {
         throw "Device with ID $deviceId not found during scan.";
       }
-      if (mesh_optionn == 1) {
+      if (deviceNetworkTypeId == 1) {
         meshController.bleMeshManager.callbacks =
             DoozProvisionedBleMeshManagerCallbacks(
               meshController.meshManagerApi,
@@ -230,8 +249,8 @@ class ProvisionedDeviceController extends GetxController {
           selectedDevice!,
           connectionTimeout: const Duration(seconds: 10),
         );
-        await meshProvisioning(selectedDevice!, mesh_optionn);
-        await wifiProvisioning(selectedDevice!, mesh_optionn);
+        await meshProvisioning(selectedDevice!, deviceNetworkTypeId);
+        await wifiProvisioning(selectedDevice!, deviceNetworkTypeId);
       } else {
         // --- Non-mesh path ---
         print("Start Bluetooth connection");
@@ -250,7 +269,7 @@ class ProvisionedDeviceController extends GetxController {
                 case DeviceConnectionState.connected:
                   print("✅ Connected! Discovering services...");
                   await Future.delayed(const Duration(milliseconds: 300));
-                  await wifiProvisioning(selectedDevice!, mesh_optionn);
+                  await wifiProvisioning(selectedDevice!, deviceNetworkTypeId);
                   break;
                 case DeviceConnectionState.disconnected:
                   print("❌ Disconnected");
@@ -267,7 +286,7 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  Future<void> wifiProvisioning(DiscoveredDevice device, mesh_optionn) async {
+  Future<void> wifiProvisioning(DiscoveredDevice device, deviceNetworkTypeId) async {
     try {
       print("✅ Connected! Discovering services...");
       final services = await flutterReactiveBle.discoverServices(device.id);
@@ -299,18 +318,16 @@ class ProvisionedDeviceController extends GetxController {
           serviceId: c.serviceId,
           characteristicId: c.characteristicId,
         );
-        if (c.characteristicId.toString().toLowerCase() ==
-            "0000ff03-0000-1000-8000-00805f9b34fb"||c.characteristicId.toString().toLowerCase() ==
-            "ff03") {
+        if ((Platform.isAndroid&&c.characteristicId.toString().toLowerCase() ==
+            "0000ff03-0000-1000-8000-00805f9b34fb")||(Platform.isIOS&&c.characteristicId.toString().toLowerCase() ==
+            "ff03"))  {
           Map<String, dynamic> payloadMap = {};
-          if (mesh_optionn == 1) {
-            final devicesJson = await _syncProvisionedDevices();
+          if (deviceNetworkTypeId == 1) {
             payloadMap = {
               "config": {
                 "ssid": selectedWifi.value,
                 "password": password_controller.text,
                 "isgateway": true, // adjust as needed
-                // "network_info": devicesJson,
                 "type": 1,
               },
             };
@@ -332,7 +349,11 @@ class ProvisionedDeviceController extends GetxController {
           );
           wifistatusText.value = "Connected to";
           await Future.delayed(Duration(seconds: 7));
-          Get.offAll(MainScreen());
+          if(deviceNetworkTypeId==1){
+          Get.offAll(MainScreen());}
+          else{
+            Get.offAll(DeviceSetupPage(device: device,deviceNetworkTypeId: deviceNetworkTypeId,));
+          }
         }
       }
     } catch (e) {
@@ -345,7 +366,7 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  Future<void> meshProvisioning(DiscoveredDevice device, mesh_optionn) async {
+  Future<void> meshProvisioning(DiscoveredDevice device, deviceNetworkTypeId) async {
     try {
       final elements = await selectedNode!.elements;
       const groupAddress = 0xC000;

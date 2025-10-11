@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:get/get.dart';
@@ -8,16 +10,29 @@ import '../../Comman_Widget/custom_button.dart';
 import 'loaction_setup_page.dart';
 import 'plant_setup_page.dart';
 
-class DeviceSetupPage extends StatelessWidget {
+class DeviceSetupPage extends StatefulWidget {
   final DiscoveredDevice device;
   ProvisionedMeshNode ?meshNode;
+  dynamic deviceNetworkTypeId ;
 
-   DeviceSetupPage({super.key,    required this.device,required this.meshNode});
+
+   DeviceSetupPage({super.key,    required this.device, this.meshNode,required this.deviceNetworkTypeId});
 
   @override
-  Widget build(BuildContext context) {
-    final setupController = Get.put(DeviceSetupController());
+  State<DeviceSetupPage> createState() => _DeviceSetupPageState();
+}
 
+class _DeviceSetupPageState extends State<DeviceSetupPage> {
+  final setupController = Get.put(DeviceSetupController());
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    setupController.currentStep.value=0;
+  }
+  @override
+  Widget build(BuildContext context) {
     return WillPopScope(
         onWillPop: () async {
       setupController.onBack(); // ✅ call your existing logic
@@ -46,10 +61,12 @@ class DeviceSetupPage extends StatelessWidget {
             children: [
               CustomButton(
                 text: "Continue",
-                onPressed:(){setupController.onContinue(device,meshNode!);},
+                onPressed: () {
+                  setupController.onContinue(widget.device, widget.meshNode, widget.deviceNetworkTypeId);
+                },
               ),
               const SizedBox(height: 18),
-              GestureDetector(onTap:(){setupController.onContinue(device,meshNode!);}, child: Text(
+              GestureDetector(onTap:(){    setupController.onContinue(widget.device, widget.meshNode, widget.deviceNetworkTypeId);}, child: Text(
                 "Skip",
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   fontSize: 14,

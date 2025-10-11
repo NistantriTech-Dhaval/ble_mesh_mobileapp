@@ -7,6 +7,7 @@ import 'package:leafybot_flutter_app/models/pot_device_model.dart';
 import 'package:leafybot_flutter_app/models/pot_register_model.dart';
 import 'package:leafybot_flutter_app/models/soil_type_model.dart';
 import 'package:leafybot_flutter_app/utils/url_utils.dart';
+import '../Comman_Widget/custom_snackbar.dart';
 import '../models/plant_location_model.dart';
 import '../utils/sharedPrefrenceUtils.dart';
 class PlantRepository {
@@ -181,6 +182,36 @@ class PlantRepository {
       } else {
         final body = jsonDecode(response.body);
         throw body["message"] ?? "Something went wrong";
+      }
+    } on SocketException {
+      throw "No Internet Connection";
+    } on FormatException {
+      throw "Invalid Response Format";
+    } catch (e) {
+      throw "$e";
+    }
+  }
+
+  static  deletePotDeviceByid(String deviceId) async {
+    String token=await Preferences.getString(LeafPreferences.accessToken);
+    try {
+      final url = Uri.parse("$UrlDeletePotDevice?id=$deviceId");
+
+      final response = await http.delete(
+        url,
+        headers: {
+          HttpHeaders.acceptHeader: 'application/json',
+          HttpHeaders.contentTypeHeader: 'application/json',
+          HttpHeaders.authorizationHeader: "Bearer $token", // if auth required
+        },
+      );
+      debugPrint("🔹 Delete deletePotDeviceByid API Response [${response.statusCode}]: ${response.body}");
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final body = jsonDecode(response.body);
+        AppSnackBar.show("error", body["message"]);
+       return false;
       }
     } on SocketException {
       throw "No Internet Connection";

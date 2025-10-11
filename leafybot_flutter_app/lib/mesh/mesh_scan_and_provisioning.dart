@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -13,8 +14,8 @@ import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class ScanningAndProvisioning extends StatefulWidget {
-  int selected_mesh_option;
-   ScanningAndProvisioning({Key? key,required this.selected_mesh_option}) : super(key: key);
+  int deviceNetworkTypeId;
+   ScanningAndProvisioning({Key? key,required this.deviceNetworkTypeId}) : super(key: key);
 
   @override
   State<ScanningAndProvisioning> createState() =>
@@ -215,10 +216,75 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                               final device = devices[i];
                               return GestureDetector(
                                 onTap: () async {
-                                  if(widget.selected_mesh_option==1){
+                                  if(widget.deviceNetworkTypeId==1){
+                                    // // listen to connection state
+                                    // flutterReactiveBle
+                                    //     .connectToDevice(
+                                    //   id: device!.id,
+                                    //   connectionTimeout: const Duration(seconds: 10),
+                                    // )
+                                    //     .listen((connectionState) async {
+                                    //   switch (connectionState.connectionState) {
+                                    //     case DeviceConnectionState.connecting:
+                                    //       print("⏳ Connecting...");
+                                    //       break;
+                                    //     case DeviceConnectionState.connected:
+                                    //       print("✅ Connected! Discovering services...");
+                                    //       await Future.delayed(const Duration(milliseconds: 300));
+                                    //
+                                    //       try {
+                                    //         final services = await flutterReactiveBle.discoverServices(device.id);
+                                    //         // 1. Print all services
+                                    //         for (var s in services) {
+                                    //           print("Service: ${s.serviceId}");
+                                    //         }
+                                    //         var customService;
+                                    //         if (Platform.isIOS) {
+                                    //           // 2. Find your custom service (0x00FF)
+                                    //           customService = services.firstWhere(
+                                    //                 (s) => s.serviceId.toString() == "00ff",
+                                    //           );
+                                    //         } else if (Platform.isAndroid) {
+                                    //           customService = services.firstWhere(
+                                    //                 (s) =>
+                                    //             s.serviceId.toString() == "000000ff-0000-1000-8000-00805f9b34fb",
+                                    //           );
+                                    //         }
+                                    //         if (customService == null) {
+                                    //           throw Exception("Custom service not found");
+                                    //         }
+                                    //         // 3. Iterate characteristics
+                                    //         for (var c in customService.characteristics) {
+                                    //           final qChar = QualifiedCharacteristic(
+                                    //             deviceId: device.id,
+                                    //             serviceId: c.serviceId,
+                                    //             characteristicId: c.characteristicId,
+                                    //           );
+                                    //           if ((Platform.isAndroid&&c.characteristicId.toString().toLowerCase() ==
+                                    //               "0000ff02-0000-1000-8000-00805f9b34fb")||(Platform.isIOS&&c.characteristicId.toString().toLowerCase() ==
+                                    //               "ff02")) {
+                                    //             final value = await flutterReactiveBle.readCharacteristic(qChar);
+                                    //
+                                    //             // value is List<int>
+                                    //             print('Characteristic value: $value');
+                                    //
+                                    //           }
+                                    //         }
+                                    //       } catch (e) {
+                                    //         print("❌ Service discovery or provisioning failed: $e");
+                                    //       }
+                                    //       break;
+                                    //     case DeviceConnectionState.disconnected:
+                                    //       print("❌ Disconnected");
+                                    //       break;
+                                    //
+                                    //     default:
+                                    //       break;
+                                    //   }
+                                    // });
                                     controller.provisionDevice(device, context);
                                   }else{
-                                    Get.to(WifiProvisioningPage(deviceId: device.name,selected_mesh_option: widget.selected_mesh_option,));
+                                    Get.to(WifiProvisioningPage(deviceId: device.id,deviceNetworkTypeId: widget.deviceNetworkTypeId,));
                                   }
 
                                 },

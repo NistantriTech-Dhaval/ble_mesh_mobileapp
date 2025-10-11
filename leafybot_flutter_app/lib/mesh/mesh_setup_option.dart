@@ -63,7 +63,7 @@ class MeshSetupOption extends StatelessWidget {
                   "Please select at least one option",
                 );
               }else{
-                Get.to(ScanningAndProvisioning(selected_mesh_option: selected_mesh_type.value,));
+                Get.to(ScanningAndProvisioning(deviceNetworkTypeId: selected_mesh_type.value,));
               }
             }),
           ],

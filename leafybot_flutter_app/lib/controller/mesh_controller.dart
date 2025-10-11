@@ -147,6 +147,7 @@ class MeshController extends GetxController {
     BuildContext context,
   ) async {
     statusText.value="Provisioning is in process...";
+    isProvisioning.value = false;
     if (isScanning.value) {
       await stopScan();
     }
@@ -275,12 +276,11 @@ class MeshController extends GetxController {
           }
         }
         await bleMeshManager.disconnect();
-        print("Provisioning is Completed");
         statusText.value = "Provisioning is Completed";
         // Wait 2 seconds then navigate
         await Future.delayed(const Duration(seconds: 6));
         // Navigate directly using GetX
-        Get.to(DeviceSetupPage(device: device,meshNode: provisionedMeshNodeF,));
+        Get.to(DeviceSetupPage(device: device,meshNode: provisionedMeshNodeF,deviceNetworkTypeId: 1));
         isProvisioning.value = false;
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);

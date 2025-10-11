@@ -1,6 +1,5 @@
 import 'dart:async';
-
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_button.dart';
@@ -126,6 +125,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                       itemCount: controller.potDeviceList.length,
                       itemBuilder: (context, i) {
                         final pot = controller.potDeviceList[i];
+                        Map<String ,dynamic> detaildata= json.decode(pot.nickName);
                         return Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -157,7 +157,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        pot.nickName+ pot.deviceId,
+                                        detaildata["nickname"],
                                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w500,
@@ -185,10 +185,10 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                     ),
                                     onPressed: () async {
                                       // Convert deviceId string to int
-                                      final int targetUnicastAddress = int.tryParse(pot.deviceId) ?? -1;
+                                      final int targetUnicastAddress = int.tryParse(detaildata["unicast_address"].toString()) ?? -1;
 
                                       if (targetUnicastAddress == -1) {
-                                        throw "Invalid device ID: ${pot.deviceId}";
+                                        throw "Invalid device ID: ${detaildata["unicast_address"]}";
                                       }
 
 //
@@ -209,7 +209,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                       debugPrint("✅ Found node with unicast address: $targetUnicastAddress");
 
                                       controller.selectedNode=matchedNode;
-                                      Get.to(WifiProvisioningPage(deviceId:pot.nickName,selected_mesh_option: 1));
+                                      Get.to(WifiProvisioningPage(deviceId:pot.deviceId,deviceNetworkTypeId: 1));
                                       // your action
                                     },
                                     label: const Text(
