@@ -12,9 +12,9 @@ import '../Comman_Widget/custom_textfield.dart' show CustomTextField;
 import '../constant/appColors.dart';
 
 class WifiProvisioningPage extends StatefulWidget {
-  final DiscoveredDevice device;
+  final String deviceId;
   int selected_mesh_option;
-   WifiProvisioningPage({Key? key,required this.device,required this.selected_mesh_option}) : super(key: key);
+   WifiProvisioningPage({Key? key,required this.deviceId,required this.selected_mesh_option}) : super(key: key);
 
   @override
   State<WifiProvisioningPage> createState() => _WifiProvisioningPageState();
@@ -31,8 +31,14 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
       fetchWifiList();
     });
   }
+
+  @override
+  void dispose() {
+     controller.isScanning.value=false;
+    super.dispose();
+  }
   fetchWifiList() async {
-   await controller.scanWifiList(widget.device);
+   await controller.scanWifiList(widget.deviceId);
   }
 
   @override
@@ -160,7 +166,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                             CustomButton(
                               text: "Retry",
                               onPressed: () async {
-                                await controller.connectWithNode(widget.device,widget.selected_mesh_option);
+                                await controller.connectWithNode(widget.deviceId,widget.selected_mesh_option);
                               },
                             ),
                           ]
@@ -243,7 +249,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                         ),
                       ),
                       trailing: GestureDetector(
-                        onTap: () async {await controller.scanWifiList(widget.device);},
+                        onTap: () async {await controller.scanWifiList(widget.deviceId);},
                         child: Image.asset(
                           AssetsPath.sync_Icon,
                           height: 24,
@@ -256,7 +262,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                         onRefresh: () async {
                           if (controller.isScanning.value)
                             return Future.value();
-                          return await controller.scanWifiList(widget.device);
+                          return await controller.scanWifiList(widget.deviceId);
                         },
                         child: Obx(() {
                           final devices = controller.wifiList;
@@ -462,7 +468,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                       if (controller.formKey.currentState!.validate()) {
                         Get.back();
                         controller.selectedWifi.value = deviceName;
-                        await controller.connectWithNode(widget.device,widget.selected_mesh_option);
+                        await controller.connectWithNode(widget.deviceId,widget.selected_mesh_option);
                       }
                     },
                   ),

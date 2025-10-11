@@ -21,7 +21,7 @@ class MeshController extends GetxController {
   final isScanning = false.obs;
   final isProvisioning = false.obs;
   final isBluetooth = false.obs;
-  late final MeshManagerApi _meshManagerApi;
+  late final MeshManagerApi meshManagerApi;
   StreamSubscription<IMeshNetwork?>? _updateSub;
   StreamSubscription<IMeshNetwork?>? _importSub;
   StreamSubscription<IMeshNetwork?>? _loadSub;
@@ -33,8 +33,8 @@ class MeshController extends GetxController {
   @override
   Future<void> onInit() async {
     super.onInit();
-    _meshManagerApi = nordicNrfMesh.meshManagerApi;
-    meshNetwork.value = _meshManagerApi.meshNetwork;
+    meshManagerApi = nordicNrfMesh.meshManagerApi;
+    meshNetwork.value = meshManagerApi.meshNetwork;
   }
   Future<void> askPermissions() async {
     if (Platform.isAndroid) {
@@ -55,15 +55,18 @@ class MeshController extends GetxController {
       await loadNodesAndGroups();
     }
 
-    _updateSub = _meshManagerApi.onNetworkUpdated.listen(_update);
-    _importSub = _meshManagerApi.onNetworkImported.listen(_update);
-    _loadSub = _meshManagerApi.onNetworkLoaded.listen(_update);
-    await _meshManagerApi.loadMeshNetwork();
+    _updateSub = meshManagerApi.onNetworkUpdated.listen(_update);
+    _importSub = meshManagerApi.onNetworkImported.listen(_update);
+    _loadSub = meshManagerApi.onNetworkLoaded.listen(_update);
+    await meshManagerApi.loadMeshNetwork();
+  }
+  Future<void> resetMeshNetwork() async {
     final loadedNodes = await meshNetwork.value?.nodes;
     if (loadedNodes!.isNotEmpty) {
-      await _meshManagerApi.resetMeshNetwork();
+      await meshManagerApi.resetMeshNetwork();
     }
   }
+
 
   Future<void> loadNodesAndGroups() async {
     if (meshNetwork.value == null) return;
@@ -76,7 +79,7 @@ class MeshController extends GetxController {
 
     // Ensure default group exists
     if (groups.isEmpty) {
-      await _meshManagerApi.meshNetwork?.addGroupWithName("DefaultGroup");
+      await meshManagerApi.meshNetwork?.addGroupWithName("DefaultGroup");
       final updatedGroups = await meshNetwork.value!.groups;
       groups.assignAll(updatedGroups);
     }
@@ -95,7 +98,7 @@ class MeshController extends GetxController {
       ) {
         if (devices.every((d) => d.id != device.id)) {
           final deviceUuid = Uuid.parse(
-            _meshManagerApi.getDeviceUuid(
+            meshManagerApi.getDeviceUuid(
               device.serviceData[meshProvisioningUuid]?.toList() ?? [],
             ),
           );
@@ -143,6 +146,7 @@ class MeshController extends GetxController {
     DiscoveredDevice device,
     BuildContext context,
   ) async {
+    statusText.value="Provisioning is in process...";
     if (isScanning.value) {
       await stopScan();
     }
@@ -171,7 +175,7 @@ class MeshController extends GetxController {
       _subscribeToProvisioning(provisioningEvent);
       final provisionedMeshNodeF = await nordicNrfMesh
           .provisioning(
-            _meshManagerApi,
+        meshManagerApi,
             BleMeshManager(),
             device,
             deviceUUID,
@@ -192,7 +196,7 @@ class MeshController extends GetxController {
         await Future.delayed(Duration(seconds: 2));
 
         bleMeshManager.callbacks = DoozProvisionedBleMeshManagerCallbacks(
-          _meshManagerApi,
+          meshManagerApi,
           bleMeshManager,
         );
         await bleMeshManager.connect(device);
@@ -220,7 +224,7 @@ class MeshController extends GetxController {
               }
 
               debugPrint('Binding AppKey to model: $sendModelId');
-              await _meshManagerApi
+              await meshManagerApi
                   .sendConfigModelAppBind(unicast, element.address, sendModelId)
                   .timeout(const Duration(seconds: 5));
 
@@ -236,7 +240,7 @@ class MeshController extends GetxController {
             final isSensorModel = modelId == 0x1100;
             if (isSensorModel) {
               debugPrint('Publishing to model: $modelId');
-              await _meshManagerApi
+              await meshManagerApi
                   .sendConfigModelPublicationSet(
                     element.address,
                     groupAddress.toInt(),
@@ -276,7 +280,7 @@ class MeshController extends GetxController {
         // Wait 2 seconds then navigate
         await Future.delayed(const Duration(seconds: 6));
         // Navigate directly using GetX
-        Get.to(DeviceSetupPage(device: device,));
+        Get.to(DeviceSetupPage(device: device,meshNode: provisionedMeshNodeF,));
         isProvisioning.value = false;
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);

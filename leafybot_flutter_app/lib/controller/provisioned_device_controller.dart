@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:leafybot_flutter_app/Comman_Widget/custom_snackbar.dart';
+import 'package:leafybot_flutter_app/models/pot_device_model.dart';
 import 'package:leafybot_flutter_app/screens/main_screen.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import '../mesh/mesh_scan_and_provisioning.dart';
+import '../repository/plantRepository.dart';
 import 'mesh_controller.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 
@@ -15,7 +17,6 @@ class ProvisionedDeviceController extends GetxController {
   final meshNetwork = Rxn<IMeshNetwork>();
   final nodes = <ProvisionedMeshNode>[].obs;
   ProvisionedMeshNode? selectedNode;
-  late final MeshManagerApi _meshManagerApi;
   StreamSubscription<IMeshNetwork?>? _updateSub;
   StreamSubscription<IMeshNetwork?>? _importSub;
   StreamSubscription<IMeshNetwork?>? _loadSub;
@@ -29,22 +30,34 @@ class ProvisionedDeviceController extends GetxController {
   final isWifiProvisioning = false.obs;
   final wifiConnectionFailed = false.obs;
   final wifistatusText = "Connecting...".obs;
+  final RxList<PotDeviceModel> potDeviceList = <PotDeviceModel>[].obs;
 
   Future<void> loadMeshNetwork() async {
     isScanning.value = true;
-    _meshManagerApi = meshController.nordicNrfMesh.meshManagerApi;
-    meshNetwork.value = _meshManagerApi.meshNetwork;
+    meshNetwork.value =  meshController.meshManagerApi.meshNetwork;
 
     void _update(IMeshNetwork? network) async {
       meshNetwork.value = network;
       await loadNodes();
     }
 
-    _updateSub = _meshManagerApi.onNetworkUpdated.listen(_update);
-    _importSub = _meshManagerApi.onNetworkImported.listen(_update);
-    _loadSub = _meshManagerApi.onNetworkLoaded.listen(_update);
-    await _meshManagerApi.loadMeshNetwork();
+    _updateSub =  meshController.meshManagerApi.onNetworkUpdated.listen(_update);
+    _importSub =  meshController.meshManagerApi.onNetworkImported.listen(_update);
+    _loadSub =  meshController.meshManagerApi.onNetworkLoaded.listen(_update);
+    await  meshController.meshManagerApi.loadMeshNetwork();
     isScanning.value = false;
+  }
+
+  Future<void> loadPotDeviceList() async {
+    try {
+      isScanning.value = true;
+      final pot_device = await PlantRepository.getAllPotDevices();
+      potDeviceList.assignAll(pot_device);
+    } catch (e) {
+      AppSnackBar.show("error", "Failed to load plant locations: $e");
+    } finally {
+      isScanning.value = false;
+    }
   }
 
   Future<void> loadNodes() async {
@@ -55,7 +68,7 @@ class ProvisionedDeviceController extends GetxController {
     nodes.assignAll(loadedNodes);
   }
 
-  Future<void> scanWifiList(DiscoveredDevice device) async {
+  Future<void> scanWifiList(String deviceId) async {
     if (isScanning.value == false) {
       isScanning.value = true;
       wifiList.clear();
@@ -64,7 +77,7 @@ class ProvisionedDeviceController extends GetxController {
       try {
         connection = flutterReactiveBle
             .connectToDevice(
-              id: device.id,
+              id: deviceId,
               connectionTimeout: const Duration(seconds: 10),
             )
             .listen((connectionState) async {
@@ -79,7 +92,7 @@ class ProvisionedDeviceController extends GetxController {
 
                   try {
                     final services = await flutterReactiveBle.discoverServices(
-                      device.id,
+                      deviceId,
                     );
 
                     // Print all services
@@ -110,7 +123,7 @@ class ProvisionedDeviceController extends GetxController {
                           "0000ff02-0000-1000-8000-00805f9b34fb"||c.characteristicId.toString().toLowerCase() ==
                           "ff02") {
                         final qChar = QualifiedCharacteristic(
-                          deviceId: device.id,
+                          deviceId: deviceId,
                           serviceId: c.serviceId,
                           characteristicId: c.characteristicId,
                         );
@@ -181,25 +194,44 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  Future<void> connectWithNode(DiscoveredDevice device, mesh_optionn) async {
+  Future<void> connectWithNode(String deviceId, mesh_optionn) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
+    DiscoveredDevice? selectedDevice;
+
+    StreamSubscription<DiscoveredDevice>? subscription;
 
     try {
+      subscription = meshController.nordicNrfMesh.scanForProxy().listen(
+            (device) {
+          if (device.id == deviceId) {
+            selectedDevice=device;
+          }},
+        onError: (err) {
+          debugPrint("Scan error: $err");
+        },
+      );
+
+      // Wait a few seconds for devices
+      await Future.delayed(const Duration(seconds: 5));
+      await subscription.cancel();
+      if (selectedDevice == null) {
+        throw "Device with ID $deviceId not found during scan.";
+      }
       if (mesh_optionn == 1) {
         meshController.bleMeshManager.callbacks =
             DoozProvisionedBleMeshManagerCallbacks(
-              _meshManagerApi,
+              meshController.meshManagerApi,
               meshController.bleMeshManager,
             );
         await meshController.bleMeshManager.disconnect();
 
         await meshController.bleMeshManager.connect(
-          device,
+          selectedDevice!,
           connectionTimeout: const Duration(seconds: 10),
         );
-        await meshProvisioning(device, mesh_optionn);
-        await wifiProvisioning(device, mesh_optionn);
+        await meshProvisioning(selectedDevice!, mesh_optionn);
+        await wifiProvisioning(selectedDevice!, mesh_optionn);
       } else {
         // --- Non-mesh path ---
         print("Start Bluetooth connection");
@@ -207,7 +239,7 @@ class ProvisionedDeviceController extends GetxController {
         // listen to connection state
         flutterReactiveBle
             .connectToDevice(
-              id: device.id,
+              id: selectedDevice!.id,
               connectionTimeout: const Duration(seconds: 10),
             )
             .listen((connectionState) async {
@@ -218,7 +250,7 @@ class ProvisionedDeviceController extends GetxController {
                 case DeviceConnectionState.connected:
                   print("✅ Connected! Discovering services...");
                   await Future.delayed(const Duration(milliseconds: 300));
-                  await wifiProvisioning(device, mesh_optionn);
+                  await wifiProvisioning(selectedDevice!, mesh_optionn);
                   break;
                 case DeviceConnectionState.disconnected:
                   print("❌ Disconnected");
@@ -278,7 +310,7 @@ class ProvisionedDeviceController extends GetxController {
                 "ssid": selectedWifi.value,
                 "password": password_controller.text,
                 "isgateway": true, // adjust as needed
-                "network_info": devicesJson,
+                // "network_info": devicesJson,
                 "type": 1,
               },
             };
@@ -327,7 +359,7 @@ class ProvisionedDeviceController extends GetxController {
               !(element == elements.first && model == element.models.first)) {
             final unicast = await selectedNode?.unicastAddress;
             if (unicast != null) {
-              await _meshManagerApi.sendConfigModelAppBind(
+              await  meshController.meshManagerApi.sendConfigModelAppBind(
                 unicast,
                 element.address,
                 model.modelId,
@@ -338,7 +370,7 @@ class ProvisionedDeviceController extends GetxController {
 
           // Add subscription for specific model
           if (model.modelId == 0x1102) {
-            await _meshManagerApi.sendConfigModelSubscriptionAdd(
+            await  meshController.meshManagerApi.sendConfigModelSubscriptionAdd(
               element.address,
               groupAddress,
               model.modelId,

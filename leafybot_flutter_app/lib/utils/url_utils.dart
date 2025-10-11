@@ -7,3 +7,5 @@ const String UrlAllPlantSpecies= "$Server/api/plant/getAllPlantSpecies";
 const String UrlAllSoilTypes= "$Server/api/plant/getAllSoilTypes";
 const String UrlAllPlantLocations= "$Server/api/plant/getAllPlantLocations";
 const String UrlAddPlantLocation= "$Server/api/plant/addPlantLocation";
+const String UrlPotRegister= "$Server/api/Device/registerdevice";
+const String UrlAllPotDevices= "$Server/api/Device/getAllDevices";

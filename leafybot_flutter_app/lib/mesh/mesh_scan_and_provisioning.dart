@@ -144,6 +144,13 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      leading: GestureDetector(
+                        onTap: () async => controller.resetMeshNetwork(),
+                        child: Icon(
+                        Icons.lock_reset_outlined,
+                          size: 24,
+                        ),
+                      ),
                       trailing: GestureDetector(
                         onTap: () async => controller.scanUnprovisioned(),
                         child: Image.asset(
@@ -211,7 +218,7 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                                   if(widget.selected_mesh_option==1){
                                     controller.provisionDevice(device, context);
                                   }else{
-                                    Get.to(WifiProvisioningPage(device: device,selected_mesh_option: widget.selected_mesh_option,));
+                                    Get.to(WifiProvisioningPage(deviceId: device.name,selected_mesh_option: widget.selected_mesh_option,));
                                   }
 
                                 },

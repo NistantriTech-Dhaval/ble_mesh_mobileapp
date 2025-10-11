@@ -9,14 +9,14 @@ import 'package:leafybot_flutter_app/controller/mesh_controller.dart';
 import 'package:leafybot_flutter_app/controller/provisioned_device_controller.dart';
 import 'package:leafybot_flutter_app/mesh/wifi_provisioning_page.dart';
 import 'package:leafybot_flutter_app/screens/main_screen.dart';
+import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import '../Comman_Widget/app_bar.dart';
 import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class ProvisionedDevicesPage extends StatefulWidget {
-  final DiscoveredDevice device;
 
-  const ProvisionedDevicesPage({Key? key,required this.device}) : super(key: key);
+  const ProvisionedDevicesPage({Key? key}) : super(key: key);
 
   @override
   State<ProvisionedDevicesPage> createState() =>
@@ -33,6 +33,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
   }
 
   loadNetwork() async {
+    await controller.loadPotDeviceList();
     await controller.loadMeshNetwork();
     await meshcontroller.scanUnprovisioned();
   }
@@ -122,9 +123,9 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                     return ListView.builder(
                       padding: const EdgeInsets.only(left: 24, right: 24, top: 14),
                       physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: nodes.length,
+                      itemCount: controller.potDeviceList.length,
                       itemBuilder: (context, i) {
-                        final node = nodes[i];
+                        final pot = controller.potDeviceList[i];
                         return Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
@@ -156,7 +157,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        "LeafyBot",
+                                        pot.nickName+ pot.deviceId,
                                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w500,
@@ -182,9 +183,33 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
-                                    onPressed: () {
-                                      controller.selectedNode=node;
-                                      Get.to(WifiProvisioningPage(device: widget.device,selected_mesh_option: 1));
+                                    onPressed: () async {
+                                      // Convert deviceId string to int
+                                      final int targetUnicastAddress = int.tryParse(pot.deviceId) ?? -1;
+
+                                      if (targetUnicastAddress == -1) {
+                                        throw "Invalid device ID: ${pot.deviceId}";
+                                      }
+
+//
+                                      ProvisionedMeshNode? matchedNode;
+
+                                      for (final node in nodes) {
+                                        final unicast = await node.unicastAddress; // await here
+                                        if (unicast == targetUnicastAddress) {
+                                          matchedNode = node;
+                                          break;
+                                        }
+                                      }
+
+                                      if (matchedNode == null) {
+                                        throw "Node with unicast address $targetUnicastAddress not found";
+                                      }
+
+                                      debugPrint("✅ Found node with unicast address: $targetUnicastAddress");
+
+                                      controller.selectedNode=matchedNode;
+                                      Get.to(WifiProvisioningPage(deviceId:pot.nickName,selected_mesh_option: 1));
                                       // your action
                                     },
                                     label: const Text(

@@ -96,7 +96,7 @@ class OtpVerificationPage extends GetView<LoginController> {
             ),
           ),
           WidgetSpan(
-            child: Padding(
+            child: GestureDetector(child:Padding(
               padding: const EdgeInsets.only(left: 4),
               child: Image.asset(
                 AssetsPath.editName,
@@ -104,6 +104,9 @@ class OtpVerificationPage extends GetView<LoginController> {
                 width: 18,
               ),
             ),
+              onTap: (){
+              Get.back();
+              },)
           ),
         ],
       ),
