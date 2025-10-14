@@ -83,14 +83,47 @@ class DeviceSetupController extends GetxController {
   Future<void> onContinue(
       DiscoveredDevice device,
       ProvisionedMeshNode? meshNode,
-      dynamic deviceNetworkTypeId) async {
-
-    if (currentStep.value < 2) {
-      currentStep.value++;
-      return;
-    }
+      dynamic deviceNetworkTypeId,
+      bool isContinue) async {
 
     try {
+      // Step 1: Check plant selected
+      if (currentStep.value == 0 && isContinue==true) {
+        if (selectedPlantSpecies.value == null) {
+          AppSnackBar.show("Error", "Please select a plant species");
+          return;
+        }
+        currentStep.value++;
+        return;
+      }
+
+      // Step 2: Check soil selected
+      if (currentStep.value == 1 && isContinue==true) {
+        if (selectedSoilType.value == null) {
+          AppSnackBar.show("Error", "Please select a soil type");
+          return;
+        }
+        currentStep.value++;
+        return;
+      }
+
+      // Step 3: Check nickname and location
+      if (currentStep.value == 2 && isContinue==true) {
+        if (plantNickName.text.isEmpty) {
+          AppSnackBar.show("Error", "Please enter a nickname for the plant");
+          return;
+        }
+        if (selectedPlantLocation.value?.location.isEmpty ?? true) {
+          AppSnackBar.show("Error", "Please select a plant location");
+          return;
+        }
+      }
+
+      if (currentStep.value < 2) {
+        currentStep.value++;
+        return;
+      }
+
       // Disable button or show loading here if needed
       Map<String, dynamic> networkData = {};
 
@@ -107,23 +140,24 @@ class DeviceSetupController extends GetxController {
       } else {
         networkData = {"nickname": plantNickName.text};
       }
+      print("Device Name ${device.name}");
 
       await PlantRepository.registerDevice(
         PotRegisterModel(
-          deviceId: device.id,
+          deviceId: device.name,
           plantTypeId: selectedPlantSpecies.value!.id,
           soilTypes: [selectedSoilType.value!.id],
           nickName: jsonEncode(networkData),
-          plantLocation: selectedPlantLocation.value!.location.isNotEmpty
-              ? selectedPlantLocation.value!.location
+          plantLocation: selectedPlantLocation.value?.location.isNotEmpty==true
+              ? selectedPlantLocation.value?.location??""
               : "Default Location",
           deviceNetworkTypeId: deviceNetworkTypeId,
           isWifiConnected: false,
           networkDetailsJson: "{}",
           firmwareVersion: "1.0.0",
           timezone: "UTC",
-          otherPlantType: selectedPlantSpecies.value!.plantName.isNotEmpty
-              ? selectedPlantSpecies.value!.plantName
+          otherPlantType: selectedPlantSpecies.value?.plantName.isNotEmpty==true
+              ? selectedPlantSpecies.value?.plantName??""
               : "Other Plant",
         ),
       );

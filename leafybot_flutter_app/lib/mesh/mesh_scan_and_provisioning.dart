@@ -217,74 +217,10 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                               return GestureDetector(
                                 onTap: () async {
                                   if(widget.deviceNetworkTypeId==1){
-                                    // // listen to connection state
-                                    // flutterReactiveBle
-                                    //     .connectToDevice(
-                                    //   id: device!.id,
-                                    //   connectionTimeout: const Duration(seconds: 10),
-                                    // )
-                                    //     .listen((connectionState) async {
-                                    //   switch (connectionState.connectionState) {
-                                    //     case DeviceConnectionState.connecting:
-                                    //       print("⏳ Connecting...");
-                                    //       break;
-                                    //     case DeviceConnectionState.connected:
-                                    //       print("✅ Connected! Discovering services...");
-                                    //       await Future.delayed(const Duration(milliseconds: 300));
-                                    //
-                                    //       try {
-                                    //         final services = await flutterReactiveBle.discoverServices(device.id);
-                                    //         // 1. Print all services
-                                    //         for (var s in services) {
-                                    //           print("Service: ${s.serviceId}");
-                                    //         }
-                                    //         var customService;
-                                    //         if (Platform.isIOS) {
-                                    //           // 2. Find your custom service (0x00FF)
-                                    //           customService = services.firstWhere(
-                                    //                 (s) => s.serviceId.toString() == "00ff",
-                                    //           );
-                                    //         } else if (Platform.isAndroid) {
-                                    //           customService = services.firstWhere(
-                                    //                 (s) =>
-                                    //             s.serviceId.toString() == "000000ff-0000-1000-8000-00805f9b34fb",
-                                    //           );
-                                    //         }
-                                    //         if (customService == null) {
-                                    //           throw Exception("Custom service not found");
-                                    //         }
-                                    //         // 3. Iterate characteristics
-                                    //         for (var c in customService.characteristics) {
-                                    //           final qChar = QualifiedCharacteristic(
-                                    //             deviceId: device.id,
-                                    //             serviceId: c.serviceId,
-                                    //             characteristicId: c.characteristicId,
-                                    //           );
-                                    //           if ((Platform.isAndroid&&c.characteristicId.toString().toLowerCase() ==
-                                    //               "0000ff02-0000-1000-8000-00805f9b34fb")||(Platform.isIOS&&c.characteristicId.toString().toLowerCase() ==
-                                    //               "ff02")) {
-                                    //             final value = await flutterReactiveBle.readCharacteristic(qChar);
-                                    //
-                                    //             // value is List<int>
-                                    //             print('Characteristic value: $value');
-                                    //
-                                    //           }
-                                    //         }
-                                    //       } catch (e) {
-                                    //         print("❌ Service discovery or provisioning failed: $e");
-                                    //       }
-                                    //       break;
-                                    //     case DeviceConnectionState.disconnected:
-                                    //       print("❌ Disconnected");
-                                    //       break;
-                                    //
-                                    //     default:
-                                    //       break;
-                                    //   }
-                                    // });
                                     controller.provisionDevice(device, context);
                                   }else{
-                                    Get.to(WifiProvisioningPage(deviceId: device.id,deviceNetworkTypeId: widget.deviceNetworkTypeId,));
+                                   await controller.stopScan();
+                                    Get.to(WifiProvisioningPage(deviceName: device.name,deviceNetworkTypeId: widget.deviceNetworkTypeId));
                                   }
 
                                 },

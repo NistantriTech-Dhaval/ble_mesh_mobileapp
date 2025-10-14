@@ -280,7 +280,7 @@ class MyPlantsPage extends StatelessWidget {
                             ),
                             onPressed: () async{
                               Get.back();
-                            var response= await PlantRepository.deletePotDeviceByid(pot.deviceId);
+                            var response= await PlantRepository.deletePotDeviceByid(pot.appDeviceId);
                             if(response==true){
                               AppSnackBar.show("success", "Plant deleted Successfully");
                               await controller.loadPotDeviceList();

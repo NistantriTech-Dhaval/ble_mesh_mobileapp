@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:leafybot_flutter_app/mesh/mesh_scan_and_provisioning.dart';
+import 'package:leafybot_flutter_app/screens/auth/welcome_page.dart';
+import 'package:leafybot_flutter_app/screens/main_screen.dart';
 
 class LoadingScreen extends StatefulWidget {
   @override
@@ -13,7 +14,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
-      Get.off(() =>  ScanningAndProvisioning(deviceNetworkTypeId: 1));
+      Get.off(() =>  MainScreen());
     });
   }
 

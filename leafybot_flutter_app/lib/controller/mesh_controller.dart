@@ -89,7 +89,7 @@ class MeshController extends GetxController {
     devices.clear();
     serviceData.clear();
 
-    if (isBluetooth.value = true) {
+    if (isBluetooth.value == true) {
       isScanning.value = true;
 
       _scanSubscription?.cancel();
@@ -107,8 +107,8 @@ class MeshController extends GetxController {
         }
       });
 
-      // Auto stop scan after 10 sec
-      Future.delayed(const Duration(seconds: 10), stopScan);
+      await Future.delayed(const Duration(seconds: 5));
+      await stopScan();
     }
   }
 

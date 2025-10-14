@@ -184,6 +184,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                       ),
                                     ),
                                     onPressed: () async {
+                                      await meshcontroller.stopScan();
                                       // Convert deviceId string to int
                                       final int targetUnicastAddress = int.tryParse(detaildata["unicast_address"].toString()) ?? -1;
 
@@ -209,7 +210,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                       debugPrint("✅ Found node with unicast address: $targetUnicastAddress");
 
                                       controller.selectedNode=matchedNode;
-                                      Get.to(WifiProvisioningPage(deviceId:pot.deviceId,deviceNetworkTypeId: 1));
+                                      Get.to(WifiProvisioningPage(deviceName:pot.deviceId,deviceNetworkTypeId: 1));
                                       // your action
                                     },
                                     label: const Text(

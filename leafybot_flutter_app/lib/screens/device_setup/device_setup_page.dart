@@ -62,11 +62,11 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
               CustomButton(
                 text: "Continue",
                 onPressed: () {
-                  setupController.onContinue(widget.device, widget.meshNode, widget.deviceNetworkTypeId);
+                  setupController.onContinue(widget.device, widget.meshNode, widget.deviceNetworkTypeId,true);
                 },
               ),
               const SizedBox(height: 18),
-              GestureDetector(onTap:(){    setupController.onContinue(widget.device, widget.meshNode, widget.deviceNetworkTypeId);}, child: Text(
+              GestureDetector(onTap:(){    setupController.onContinue(widget.device, widget.meshNode, widget.deviceNetworkTypeId,false);}, child: Text(
                 "Skip",
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   fontSize: 14,
