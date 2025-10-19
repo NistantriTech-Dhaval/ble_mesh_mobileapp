@@ -147,7 +147,6 @@ class MeshController extends GetxController {
     BuildContext context,
   ) async {
     statusText.value="Provisioning is in process...";
-    isProvisioning.value = false;
     if (isScanning.value) {
       await stopScan();
     }

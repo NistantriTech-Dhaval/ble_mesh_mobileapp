@@ -206,7 +206,7 @@ class PlantRepository {
         },
       );
       debugPrint("🔹 Delete deletePotDeviceByid API Response [${response.statusCode}]: ${response.body}");
-      if (response.statusCode == 200) {
+      if (response.statusCode == 204) {
         return true;
       } else {
         final body = jsonDecode(response.body);

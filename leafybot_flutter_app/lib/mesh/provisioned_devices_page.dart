@@ -52,12 +52,24 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
               ? Column(
             children: [
               Spacer(),
+              if (meshcontroller.statusText.value !=
+                  "Provisioning is Completed")
                 const CircularProgressLoader(
                   size: 40,
                   strokeWidth: 7,
                   backgroundcolor: AppColors.grayLight,
                 ),
-              const SizedBox(height: 24),
+              if (meshcontroller.statusText.value !=
+                  "Provisioning is Completed")
+                const SizedBox(height: 24),
+              if (meshcontroller.statusText.value ==
+                  "Provisioning is Completed")
+                Image.asset(
+                  AssetsPath.success_gif,
+                  height: 120,
+                  width: 120,
+                  fit: BoxFit.cover,
+                ),
               Text(
                 meshcontroller.statusText.value,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -292,6 +304,9 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                       itemCount: devices.length,
                       itemBuilder: (context, i) {
                         final device = devices[i];
+                        final uuid = meshcontroller.serviceData[device.id];
+                        final mac = decodeMacFromDeviceUuid(uuid?.toString());
+
                         return GestureDetector(
                           onTap: () => meshcontroller.provisionDevice(device, context),
                           child: Container(
@@ -317,7 +332,7 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  device.name,
+                                  mac.toString(),
                                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w400,
@@ -355,5 +370,16 @@ class _ProvisionedDevicesPageState extends State<ProvisionedDevicesPage> {
       );
     });
   }
+  String? decodeMacFromDeviceUuid(String? uuid) {
+    if (uuid == null || uuid.isEmpty) return null;
 
+    final parts = uuid.split('-');
+    if (parts.length < 4) return null;
+
+    // Extract last 4 chars of the first block + full 2nd + full 3rd blocks
+    final macHex = (parts[0].substring(parts[0].length - 4) + parts[1] + parts[2]).toUpperCase();
+
+    // Format into standard MAC: XX:XX:XX:XX:XX:XX
+    return macHex.replaceAllMapped(RegExp(r'.{2}'), (m) => '${m.group(0)}:').substring(0, 17);
+  }
 }

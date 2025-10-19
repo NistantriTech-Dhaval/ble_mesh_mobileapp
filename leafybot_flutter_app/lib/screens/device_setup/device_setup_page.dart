@@ -29,7 +29,14 @@ class _DeviceSetupPageState extends State<DeviceSetupPage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    setupController.currentStep.value=0;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setupController.currentStep.value = 0;
+      setupController. selectedSoilType.value = null;
+      setupController.selectedPlantLocation.value = null;
+      setupController. selectedPlantSpecies.value = null;
+      setupController. plantNickName.clear();
+      setupController. plantLocationName.clear();
+    });
   }
   @override
   Widget build(BuildContext context) {

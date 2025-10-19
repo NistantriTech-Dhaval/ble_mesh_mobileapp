@@ -115,26 +115,26 @@ class MyPlantsPage extends StatelessWidget {
                                     ),
                                   ),
                                   Row(
+                                    mainAxisSize: MainAxisSize.min, // make row wrap content
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                    Expanded(child:   Text(
-                                        pot.deviceId,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                              fontSize: 14,
-                                              letterSpacing: 0,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                      )),
-                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          pot.deviceId,
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            fontSize: 14,
+                                            letterSpacing: 0,
+                                            fontWeight: FontWeight.w400,
+                                          ),
+                                          overflow: TextOverflow.ellipsis, // prevent overflow
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6), // spacing between text and circle
                                       Container(
                                         height: 8,
                                         width: 8,
                                         decoration: BoxDecoration(
-                                          color: pot.isBlank==false
-                                              ? AppColors.green
-                                              : AppColors.red,
+                                          color: pot.isBlank == false ? AppColors.green : AppColors.red,
                                           shape: BoxShape.circle,
                                         ),
                                       ),

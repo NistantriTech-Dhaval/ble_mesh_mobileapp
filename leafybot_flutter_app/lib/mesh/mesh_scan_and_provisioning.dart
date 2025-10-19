@@ -214,6 +214,10 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                             itemCount: devices.length,
                             itemBuilder: (context, i) {
                               final device = devices[i];
+                              final uuid = controller.serviceData[device.id];
+                              final mac = decodeMacFromDeviceUuid(uuid?.toString());
+
+
                               return GestureDetector(
                                 onTap: () async {
                                   if(widget.deviceNetworkTypeId==1){
@@ -254,7 +258,7 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                                       ),
                                       const SizedBox(width: 10),
                                       Text(
-                                        device.name,
+                                        mac.toString(),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleSmall
@@ -278,6 +282,20 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
       );
     });
   }
+  String? decodeMacFromDeviceUuid(String? uuid) {
+    if (uuid == null || uuid.isEmpty) return null;
+
+    final parts = uuid.split('-');
+    if (parts.length < 4) return null;
+
+    // Extract last 4 chars of the first block + full 2nd + full 3rd blocks
+    final macHex = (parts[0].substring(parts[0].length - 4) + parts[1] + parts[2]).toUpperCase();
+
+    // Format into standard MAC: XX:XX:XX:XX:XX:XX
+    return macHex.replaceAllMapped(RegExp(r'.{2}'), (m) => '${m.group(0)}:').substring(0, 17);
+  }
+
+
 }
 
 class DoozProvisionedBleMeshManagerCallbacks extends BleMeshManagerCallbacks {

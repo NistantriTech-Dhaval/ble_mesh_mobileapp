@@ -38,6 +38,12 @@ class DeviceSetupController extends GetxController {
   @override
   Future<void> onInit() async {
     super.onInit();
+    currentStep.value = 0;
+    selectedSoilType.value = null;
+    selectedPlantLocation.value = null;
+    selectedPlantSpecies.value = null;
+    plantNickName.clear();
+    plantLocationName.clear();
     await loadPlantSpecies();
     await loadSoilTypes();
     await loadPlantLocation();
