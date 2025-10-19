@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
@@ -52,6 +53,7 @@ class LoginController extends GetxController {
       if (response.success) {
         // ✅ OTP Sent, navigate to verification screen
         AppSnackBar.show("Success", "OTP sent successfully");
+        otpController.text =response.currentOtp;
 
         Get.to(
           () => OtpVerificationPage(
@@ -109,7 +111,7 @@ class LoginController extends GetxController {
           onButtonPressed: () {
             Get.back();
             if (response.isProfileComplete == true) {
-              Get.offAll(ProfilePage());
+              Get.offAll(MainScreen());
             } else {
               Get.offAll(ProfilePage());
             }
