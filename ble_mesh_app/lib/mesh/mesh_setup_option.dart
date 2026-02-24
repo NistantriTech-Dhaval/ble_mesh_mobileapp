@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ntpl_ble_mesh_demo/mesh/mesh_network_list_page.dart';
 import 'package:ntpl_ble_mesh_demo/mesh/mesh_scan_and_provisioning.dart';
 import '../../Comman_Widget/app_bar.dart';
 import '../../Comman_Widget/custom_button.dart';
@@ -62,8 +63,13 @@ class MeshSetupOption extends StatelessWidget {
                   "error",
                   "Please select at least one option",
                 );
-              }else{
-                Get.to(ScanningAndProvisioning(deviceNetworkTypeId: selected_mesh_type.value,));
+              } else if (selected_mesh_type.value == 1) {
+                Get.to(MeshNetworkListPage(
+                  deviceCount: device_count,
+                  leafystickCount: leafystick_count,
+                ));
+              } else {
+                Get.to(ScanningAndProvisioning(deviceNetworkTypeId: selected_mesh_type.value));
               }
             }),
           ],

@@ -3,9 +3,14 @@ import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/constant/appColors.dart';
 import 'package:ntpl_ble_mesh_demo/screens/splashScreen.dart';
 import 'package:ntpl_ble_mesh_demo/controller/theme_controller.dart';
+import 'package:ntpl_ble_mesh_demo/controller/thingsboard_controller.dart';
+import 'package:ntpl_ble_mesh_demo/service/tb_storage_shared.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final storage = await TbStorageShared.create();
   Get.put(ThemeController());
+  Get.put(ThingsBoardController(storage: storage));
   runApp(const MyApp());
 }
 

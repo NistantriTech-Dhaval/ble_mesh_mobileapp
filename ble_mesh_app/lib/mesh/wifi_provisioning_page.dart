@@ -13,8 +13,17 @@ import '../constant/appColors.dart';
 
 class WifiProvisioningPage extends StatefulWidget {
   final String deviceName;
-  int deviceNetworkTypeId;
-   WifiProvisioningPage({Key? key,required this.deviceName,required this.deviceNetworkTypeId}) : super(key: key);
+  final int deviceNetworkTypeId;
+  final String? meshNetworkId;
+  final int? gatewayUnicast;
+
+  WifiProvisioningPage({
+    Key? key,
+    required this.deviceName,
+    required this.deviceNetworkTypeId,
+    this.meshNetworkId,
+    this.gatewayUnicast,
+  }) : super(key: key);
 
   @override
   State<WifiProvisioningPage> createState() => _WifiProvisioningPageState();
@@ -167,7 +176,12 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                             CustomButton(
                               text: "Retry",
                               onPressed: () async {
-                                await controller.connectWithNode(widget.deviceName,widget.deviceNetworkTypeId);
+                                await controller.connectWithNode(
+                                  widget.deviceName,
+                                  widget.deviceNetworkTypeId,
+                                  meshNetworkId: widget.meshNetworkId,
+                                  gatewayUnicast: widget.gatewayUnicast,
+                                );
                               },
                             ),
                           ]
@@ -469,7 +483,12 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                       if (controller.formKey.currentState!.validate()) {
                         Get.back();
                         controller.selectedWifi.value = deviceName;
-                        await controller.connectWithNode(widget.deviceName,widget.deviceNetworkTypeId);
+                        await controller.connectWithNode(
+                          widget.deviceName,
+                          widget.deviceNetworkTypeId,
+                          meshNetworkId: widget.meshNetworkId,
+                          gatewayUnicast: widget.gatewayUnicast,
+                        );
                       }
                     },
                   ),

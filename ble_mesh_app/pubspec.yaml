@@ -51,6 +51,7 @@ dependencies:
   form_builder_validators: ^11.2.0
   flutter_form_builder: ^10.2.0
   flutter_reactive_ble: ^5.0.2
+  thingsboard_client: ^4.1.0
 
   nordic_nrf_mesh:
     path: ../
@@ -80,8 +81,6 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/
-    - assets/plants/
-    - assets/plant_location/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -9,6 +9,8 @@ import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'package:ntpl_ble_mesh_demo/controller/mesh_network_controller.dart';
+
 import '../mesh/mesh_scan_and_provisioning.dart';
 
 class MeshController extends GetxController {
@@ -58,6 +60,34 @@ class MeshController extends GetxController {
     _updateSub = meshManagerApi.onNetworkUpdated.listen(_update);
     _importSub = meshManagerApi.onNetworkImported.listen(_update);
     _loadSub = meshManagerApi.onNetworkLoaded.listen(_update);
+    await meshManagerApi.loadMeshNetwork();
+  }
+
+  /// Loads mesh network for commissioning: if [meshNetworkId] is set and that asset has meshNetworkJson attribute, imports from ThingsBoard; otherwise loads from local storage.
+  Future<void> loadMeshNetworkForCommissioning(String? meshNetworkId) async {
+    void _update(IMeshNetwork? network) async {
+      meshNetwork.value = network;
+      await loadNodesAndGroups();
+    }
+
+    _updateSub?.cancel();
+    _importSub?.cancel();
+    _loadSub?.cancel();
+    _updateSub = meshManagerApi.onNetworkUpdated.listen(_update);
+    _importSub = meshManagerApi.onNetworkImported.listen(_update);
+    _loadSub = meshManagerApi.onNetworkLoaded.listen(_update);
+
+    if (meshNetworkId != null && meshNetworkId.isNotEmpty) {
+      try {
+        final netCtrl = Get.find<MeshNetworkController>();
+        final attrs = await netCtrl.getMeshNetworkAttributes(meshNetworkId);
+        final json = attrs[MeshNetworkAttrKeys.meshNetworkJson];
+        if (json != null && json.toString().trim().isNotEmpty) {
+          await meshManagerApi.importMeshNetworkJson(json.toString());
+          return;
+        }
+      } catch (_) {}
+    }
     await meshManagerApi.loadMeshNetwork();
   }
   Future<void> resetMeshNetwork() async {
@@ -144,8 +174,9 @@ class MeshController extends GetxController {
 
   Future<void> provisionDevice(
     DiscoveredDevice device,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    String? meshNetworkId,
+  }) async {
     statusText.value="Provisioning is in process...";
     if (isScanning.value) {
       await stopScan();
@@ -276,10 +307,47 @@ class MeshController extends GetxController {
         }
         await bleMeshManager.disconnect();
         statusText.value = "Provisioning is Completed";
+        // Use selected mesh network asset: save mesh data, create device by MAC, store required info, set as gateway
+        if (meshNetworkId != null && meshNetworkId.isNotEmpty) {
+          try {
+            final netCtrl = Get.find<MeshNetworkController>();
+            final exported = await meshManagerApi.exportMeshNetwork();
+            if (exported != null) {
+              final nodeCount = (await meshNetwork.value?.nodes)?.length ?? 0;
+              await netCtrl.saveMeshNetworkAttributes(
+                meshNetworkId,
+                meshNetworkJson: exported,
+                deviceCount: nodeCount,
+              );
+            }
+            final unicast = await provisionedMeshNodeF.unicastAddress;
+            final deviceDisplayName = device.name ;
+            final details = <String, dynamic>{
+              MeshDeviceAttrKeys.unicastAddress: unicast,
+              MeshDeviceAttrKeys.meshNodeUuid: deviceUUID,
+              MeshDeviceAttrKeys.bleDeviceId: device.id.toString(),
+              MeshDeviceAttrKeys.macAddress: device.name ?? '',
+              MeshDeviceAttrKeys.isGateway: true,
+            };
+            // Create device in ThingsBoard using MAC (in selected asset), store required info, link to asset
+            await netCtrl.createAndLinkDevice(
+              meshNetworkId,
+              deviceDisplayName,
+              details: details,
+            );
+            // Set this provisioned device as gateway for the network (replaces any existing gateway)
+            await netCtrl.setGateway(meshNetworkId, unicast);
+          } catch (_) {}
+        }
         // Wait 2 seconds then navigate
         await Future.delayed(const Duration(seconds: 6));
         // Navigate directly using GetX
-        Get.to(ProvisionedDevicesPage());
+        Get.to(ProvisionedDevicesPage(
+          device: device,
+          deviceNetworkTypeId: 1,
+          meshNode: provisionedMeshNodeF,
+          meshNetworkId: meshNetworkId,
+        ));
         isProvisioning.value = false;
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);
@@ -297,6 +365,15 @@ class MeshController extends GetxController {
     } finally {
       isProvisioning.value = false;
     }
+  }
+
+  /// Derives MAC-style address from BLE device UUID (Android uses MAC in UUID; iOS may not have MAC).
+  static String? _decodeMacFromDeviceUuid(String? uuid) {
+    if (uuid == null || uuid.isEmpty) return null;
+    final parts = uuid.split('-');
+    if (parts.length < 4) return null;
+    final macHex = (parts[0].substring(parts[0].length - 4) + parts[1] + parts[2]).toUpperCase();
+    return macHex.replaceAllMapped(RegExp(r'.{2}'), (m) => '${m.group(0)}:').substring(0, 17);
   }
 
   @override

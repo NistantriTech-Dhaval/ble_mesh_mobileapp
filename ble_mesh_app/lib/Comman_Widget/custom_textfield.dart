@@ -43,6 +43,9 @@ class CustomTextField extends StatelessWidget {
   final double filterWidth;
   final List<TextInputFormatter>? inputFormatters;
 
+  /// Form field name for FormBuilder (must be unique when using multiple fields).
+  final String name;
+
   const CustomTextField({
     super.key,
     this.hintText,
@@ -76,6 +79,7 @@ class CustomTextField extends StatelessWidget {
     this.filterHeight = 50,
     this.filterWidth = 50,
     this.inputFormatters,
+    this.name = '',
   });
 
   @override
@@ -164,7 +168,7 @@ class CustomTextField extends StatelessWidget {
                   width: borderWidth,
                 ),
               ),
-            ), name: '',
+            ), name: name,
           ),
         ),
 

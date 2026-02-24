@@ -9,6 +9,7 @@ import 'package:ntpl_ble_mesh_demo/mesh/provisioned_devices_page.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import '../mesh/mesh_scan_and_provisioning.dart';
 import 'mesh_controller.dart';
+import 'mesh_network_controller.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 
 class ProvisionedDeviceController extends GetxController {
@@ -228,7 +229,12 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  Future<void> connectWithNode(String deviceName, deviceNetworkTypeId) async {
+  Future<void> connectWithNode(
+    String deviceName,
+    deviceNetworkTypeId, {
+    String? meshNetworkId,
+    int? gatewayUnicast,
+  }) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
     DiscoveredDevice? selectedDevice;
@@ -281,7 +287,12 @@ class ProvisionedDeviceController extends GetxController {
           connectionTimeout: const Duration(seconds: 10),
         );
         await meshProvisioning(selectedDevice!, deviceNetworkTypeId);
-        await wifiProvisioning(selectedDevice!, deviceNetworkTypeId);
+        await wifiProvisioning(
+          selectedDevice!,
+          deviceNetworkTypeId,
+          meshNetworkId: meshNetworkId,
+          gatewayUnicast: gatewayUnicast,
+        );
       } else {
         // --- Non-mesh path ---
         print("Start Bluetooth connection");
@@ -300,7 +311,12 @@ class ProvisionedDeviceController extends GetxController {
                 case DeviceConnectionState.connected:
                   print("✅ Connected! Discovering services...");
                   await Future.delayed(const Duration(milliseconds: 300));
-                  await wifiProvisioning(selectedDevice!, deviceNetworkTypeId);
+                  await wifiProvisioning(
+                    selectedDevice!,
+                    deviceNetworkTypeId,
+                    meshNetworkId: meshNetworkId,
+                    gatewayUnicast: gatewayUnicast,
+                  );
                   break;
                 case DeviceConnectionState.disconnected:
                   print("❌ Disconnected");
@@ -317,7 +333,12 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  Future<void> wifiProvisioning(DiscoveredDevice device, deviceNetworkTypeId) async {
+  Future<void> wifiProvisioning(
+    DiscoveredDevice device,
+    deviceNetworkTypeId, {
+    String? meshNetworkId,
+    int? gatewayUnicast,
+  }) async {
     try {
       print("✅ Connected! Discovering services...");
       final services = await flutterReactiveBle.discoverServices(device.id);
@@ -380,11 +401,18 @@ class ProvisionedDeviceController extends GetxController {
           );
           wifistatusText.value = "Connected to";
           await Future.delayed(Duration(seconds: 7));
-          if(deviceNetworkTypeId==1){
-          Get.offAll(ProvisionedDevicesPage());}
-          else{
-            Get.offAll(ProvisionedDevicesPage());
+          if (meshNetworkId != null && gatewayUnicast != null && Get.isRegistered<MeshNetworkController>()) {
+            final ok = await Get.find<MeshNetworkController>().setGateway(meshNetworkId!, gatewayUnicast);
+            if (!ok) debugPrint('setGateway failed after WiFi provisioning');
           }
+          final meshNetId = meshNetworkId ?? (Get.isRegistered<MeshNetworkController>()
+              ? Get.find<MeshNetworkController>().selectedNetworkId.value
+              : null);
+          Get.offAll(ProvisionedDevicesPage(
+            device: device,
+            deviceNetworkTypeId: deviceNetworkTypeId,
+            meshNetworkId: meshNetId,
+          ));
         }
       }
     } catch (e) {

@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ntpl_ble_mesh_demo/constant/assets_path.dart';
+import 'package:ntpl_ble_mesh_demo/controller/thingsboard_controller.dart';
 import 'package:ntpl_ble_mesh_demo/mesh/leafy_device_count_page.dart';
+import 'package:ntpl_ble_mesh_demo/screens/login_page.dart';
 
 class LoadingScreen extends StatefulWidget {
   @override
@@ -12,8 +15,14 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), () {
-      Get.off(() => LeafyDeviceCountPage());
+    Future.delayed(const Duration(seconds: 2), () async {
+      final tb = Get.find<ThingsBoardController>();
+      await tb.ensureValidToken();
+      if (tb.isAuthenticated) {
+        Get.off(() => const LeafyDeviceCountPage());
+      } else {
+        Get.off(() => const LoginPage());
+      }
     });
   }
 
@@ -25,7 +34,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
         decoration: BoxDecoration(color: Color(0xFF002B34)),
         child: Center(
           child: Image(
-            image: AssetImage('assets/splash_logo.png'),
+            image: AssetImage(AssetsPath.splashLogo),
           ),
         ));
   }

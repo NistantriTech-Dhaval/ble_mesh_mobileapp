@@ -14,8 +14,14 @@ import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class ScanningAndProvisioning extends StatefulWidget {
-  int deviceNetworkTypeId;
-   ScanningAndProvisioning({Key? key,required this.deviceNetworkTypeId}) : super(key: key);
+  final int deviceNetworkTypeId;
+  final String? meshNetworkId;
+
+  ScanningAndProvisioning({
+    Key? key,
+    required this.deviceNetworkTypeId,
+    this.meshNetworkId,
+  }) : super(key: key);
 
   @override
   State<ScanningAndProvisioning> createState() =>
@@ -37,7 +43,7 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
       switch (state) {
         case BluetoothAdapterState.on:
           controller.isBluetooth.value = true;
-          await controller.loadMeshNetwork();
+          await controller.loadMeshNetworkForCommissioning(widget.meshNetworkId);
           await controller.scanUnprovisioned();
           break;
         case BluetoothAdapterState.off:
@@ -221,7 +227,11 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
                               return GestureDetector(
                                 onTap: () async {
                                   if(widget.deviceNetworkTypeId==1){
-                                    controller.provisionDevice(device, context);
+                                    controller.provisionDevice(
+                                      device,
+                                      context,
+                                      meshNetworkId: widget.meshNetworkId,
+                                    );
                                   }else{
                                    await controller.stopScan();
                                     Get.to(WifiProvisioningPage(deviceName: device.name,deviceNetworkTypeId: widget.deviceNetworkTypeId));
