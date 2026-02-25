@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/Comman_Widget/custom_snackbar.dart';
-import 'package:ntpl_ble_mesh_demo/mesh/provisioned_devices_page.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import '../mesh/mesh_scan_and_provisioning.dart';
 import 'mesh_controller.dart';
@@ -20,7 +19,7 @@ class ProvisionedDeviceController extends GetxController {
   StreamSubscription<IMeshNetwork?>? _importSub;
   StreamSubscription<IMeshNetwork?>? _loadSub;
   final GlobalKey<FormBuilderState> formKey = GlobalKey<FormBuilderState>();
-  final meshController = Get.find<MeshController>();
+  late final MeshController meshController = Get.put(MeshController());
   final isScanning = false.obs;
   final password_controller = TextEditingController();
   final FlutterReactiveBle flutterReactiveBle = FlutterReactiveBle();
@@ -230,112 +229,150 @@ class ProvisionedDeviceController extends GetxController {
   }
 
   Future<void> connectWithNode(
-    String deviceName,
-    deviceNetworkTypeId, {
+    String deviceName, {
     String? meshNetworkId,
     int? gatewayUnicast,
   }) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
+    wifistatusText.value = "Connecting...";
     DiscoveredDevice? selectedDevice;
 
-    StreamSubscription<DiscoveredDevice>? subscription;
-
     try {
-      if (deviceNetworkTypeId == 1) {
-        subscription = meshController.nordicNrfMesh.scanForProxy().listen(
-          (device) {
-            if (device.name == deviceName) {
-              selectedDevice = device;
-            }
-          },
-          onError: (err) {
-            debugPrint("Scan error: $err");
-          },
-        );
-      } else {
-        subscription = flutterReactiveBle
-            .scanForDevices(withServices: [], scanMode: ScanMode.balanced)
-            .listen(
-              (device) {
-                if (device.name == deviceName) {
-                  selectedDevice = device;
-                }
-              },
-              onError: (err) {
-                debugPrint("BLE scan error: $err");
-              },
-            );
-      }
+      final subscription = meshController.nordicNrfMesh.scanForProxy().listen(
+        (device) {
+          if (device.name == deviceName) {
+            selectedDevice = device;
+          }
+        },
+        onError: (err) {
+          debugPrint("Scan error: $err");
+        },
+      );
 
-      // Wait a few seconds for devices
       await Future.delayed(const Duration(seconds: 5));
       await subscription.cancel();
       if (selectedDevice == null) {
         throw "Device with ID $deviceName not found during scan.";
       }
-      if (deviceNetworkTypeId == 1) {
-        meshController.bleMeshManager.callbacks =
-            DoozProvisionedBleMeshManagerCallbacks(
-              meshController.meshManagerApi,
-              meshController.bleMeshManager,
-            );
-        await meshController.bleMeshManager.disconnect();
 
-        await meshController.bleMeshManager.connect(
-          selectedDevice!,
-          connectionTimeout: const Duration(seconds: 10),
-        );
-        await meshProvisioning(selectedDevice!, deviceNetworkTypeId);
-        await wifiProvisioning(
-          selectedDevice!,
-          deviceNetworkTypeId,
-          meshNetworkId: meshNetworkId,
-          gatewayUnicast: gatewayUnicast,
-        );
-      } else {
-        // --- Non-mesh path ---
-        print("Start Bluetooth connection");
+      meshController.bleMeshManager.callbacks =
+          DoozProvisionedBleMeshManagerCallbacks(
+            meshController.meshManagerApi,
+            meshController.bleMeshManager,
+          );
+      await meshController.bleMeshManager.disconnect();
 
-        // listen to connection state
-        flutterReactiveBle
-            .connectToDevice(
-              id: selectedDevice!.id,
-              connectionTimeout: const Duration(seconds: 10),
-            )
-            .listen((connectionState) async {
-              switch (connectionState.connectionState) {
-                case DeviceConnectionState.connecting:
-                  print("⏳ Connecting...");
-                  break;
-                case DeviceConnectionState.connected:
-                  print("✅ Connected! Discovering services...");
-                  await Future.delayed(const Duration(milliseconds: 300));
-                  await wifiProvisioning(
-                    selectedDevice!,
-                    deviceNetworkTypeId,
-                    meshNetworkId: meshNetworkId,
-                    gatewayUnicast: gatewayUnicast,
-                  );
-                  break;
-                case DeviceConnectionState.disconnected:
-                  print("❌ Disconnected");
-                  break;
-
-                default:
-                  break;
-              }
-            });
-      }
+      await meshController.bleMeshManager.connect(
+        selectedDevice!,
+        connectionTimeout: const Duration(seconds: 10),
+      );
+      await meshProvisioning(selectedDevice!);
+      await wifiProvisioning(
+        selectedDevice!,
+        meshNetworkId: meshNetworkId,
+        gatewayUnicast: gatewayUnicast,
+      );
     } catch (e, st) {
       wifiConnectionFailed.value = true;
       debugPrint("connectWithNode error: $e\n$st");
     }
   }
 
+  static bool _deviceNameMatches(String? advertised, String expected) {
+    final a = (advertised ?? '').trim().toUpperCase();
+    final e = expected.trim().toUpperCase();
+    return a.isNotEmpty && (a == e || a.contains(e) || e.contains(a));
+  }
+
+  /// Connects to the device by name (mesh proxy scan) and sends config with isgateway: false to clear gateway role on the device.
+  Future<bool> connectAndSendRemoveGateway(String deviceName) async {
+    DiscoveredDevice? selectedDevice;
+    try {
+      // Short delay so BLE/mesh can settle after mesh load and node iteration
+      await Future.delayed(const Duration(milliseconds: 1500));
+      for (var attempt = 0; attempt < 2; attempt++) {
+        if (attempt > 0) {
+          debugPrint("Remove gateway: retry scan...");
+          await Future.delayed(const Duration(seconds: 2));
+        }
+        final completer = Completer<void>();
+        final sub = meshController.nordicNrfMesh.scanForProxy().listen(
+          (device) {
+            if (_deviceNameMatches(device.name, deviceName)) {
+              selectedDevice = device;
+              if (!completer.isCompleted) completer.complete();
+            }
+          },
+          onError: (err) {
+            debugPrint("Scan error: $err");
+            if (!completer.isCompleted) completer.complete();
+          },
+        );
+        try {
+          await completer.future.timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {},
+          );
+        } on TimeoutException {
+          // No device found in 8s
+        }
+        await sub.cancel();
+        if (selectedDevice != null) break;
+      }
+      if (selectedDevice == null) {
+        debugPrint("Remove gateway: device '$deviceName' not found after scan");
+        return false;
+      }
+
+      meshController.bleMeshManager.callbacks = DoozProvisionedBleMeshManagerCallbacks(
+        meshController.meshManagerApi,
+        meshController.bleMeshManager,
+      );
+      await meshController.bleMeshManager.disconnect();
+      await meshController.bleMeshManager.connect(
+        selectedDevice!,
+        connectionTimeout: const Duration(seconds: 10),
+      );
+
+      final services = await flutterReactiveBle.discoverServices(selectedDevice!.id);
+      Uuid? serviceId;
+      Uuid? characteristicId;
+      for (final s in services) {
+        if ((Platform.isIOS && s.serviceId.toString() == "00ff") ||
+            (Platform.isAndroid && s.serviceId.toString().toLowerCase() == "000000ff-0000-1000-8000-00805f9b34fb")) {
+          for (final c in s.characteristics) {
+            if ((Platform.isAndroid && c.characteristicId.toString().toLowerCase() == "0000ff03-0000-1000-8000-00805f9b34fb") ||
+                (Platform.isIOS && c.characteristicId.toString().toLowerCase() == "ff03")) {
+              serviceId = s.serviceId;
+              characteristicId = c.characteristicId;
+              break;
+            }
+          }
+          break;
+        }
+      }
+      if (serviceId == null || characteristicId == null) {
+        await meshController.bleMeshManager.disconnect();
+        return false;
+      }
+
+      // First: unsubscribe and set publication while device is still connected (before isgateway: false).
+      // Sending isgateway: false causes ESP32 to restart, so we must do mesh config first.
+      if (selectedNode != null) {
+        await meshUnsubscribeGatewayGroup();
+      }
+      await meshController.bleMeshManager.disconnect();
+      return true;
+    } catch (e) {
+      debugPrint("connectAndSendRemoveGateway error: $e");
+      await meshController.bleMeshManager.disconnect();
+      return false;
+    }
+  }
+
   Future<void> wifiProvisioning(
-    DiscoveredDevice device,
-    deviceNetworkTypeId, {
+    DiscoveredDevice device, {
     String? meshNetworkId,
     int? gatewayUnicast,
   }) async {
@@ -373,25 +410,19 @@ class ProvisionedDeviceController extends GetxController {
         if ((Platform.isAndroid&&c.characteristicId.toString().toLowerCase() ==
             "0000ff03-0000-1000-8000-00805f9b34fb")||(Platform.isIOS&&c.characteristicId.toString().toLowerCase() ==
             "ff03"))  {
-          Map<String, dynamic> payloadMap = {};
-          if (deviceNetworkTypeId == 1) {
-            payloadMap = {
-              "config": {
-                "ssid": selectedWifi.value,
-                "password": password_controller.text,
-                "isgateway": true, // adjust as needed
-                "type": 1,
-              },
-            };
-          } else {
-            payloadMap = {
-              "config": {
-                "ssid": selectedWifi.value,
-                "password": password_controller.text,
-                "type": 2,
-              },
-            };
+          String? deviceAccessToken;
+          if (meshNetworkId != null && gatewayUnicast != null && Get.isRegistered<MeshNetworkController>()) {
+            deviceAccessToken = await Get.find<MeshNetworkController>().getDeviceAccessToken(meshNetworkId!, gatewayUnicast!);
           }
+          final payloadMap = {
+            "config": {
+              "ssid": selectedWifi.value,
+              "password": password_controller.text,
+              "isgateway": true,
+              "type": 1,
+              if (deviceAccessToken != null && deviceAccessToken.isNotEmpty) "deviceAccessToken": deviceAccessToken,
+            },
+          };
           final payloadJson = jsonEncode(payloadMap);
           final payloadBytes = utf8.encode(payloadJson).toList();
 
@@ -405,14 +436,7 @@ class ProvisionedDeviceController extends GetxController {
             final ok = await Get.find<MeshNetworkController>().setGateway(meshNetworkId!, gatewayUnicast);
             if (!ok) debugPrint('setGateway failed after WiFi provisioning');
           }
-          final meshNetId = meshNetworkId ?? (Get.isRegistered<MeshNetworkController>()
-              ? Get.find<MeshNetworkController>().selectedNetworkId.value
-              : null);
-          Get.offAll(ProvisionedDevicesPage(
-            device: device,
-            deviceNetworkTypeId: deviceNetworkTypeId,
-            meshNetworkId: meshNetId,
-          ));
+          Get.back();
         }
       }
     } catch (e) {
@@ -422,10 +446,40 @@ class ProvisionedDeviceController extends GetxController {
     } finally {
       await meshController.bleMeshManager.disconnect();
       isWifiProvisioning.value = false;
+      wifistatusText.value = "Connecting...";
     }
   }
 
-  Future<void> meshProvisioning(DiscoveredDevice device, deviceNetworkTypeId) async {
+  /// Removes the gateway group (0xC000) subscription from the [selectedNode] so it
+  /// no longer receives data from other nodes. Call when removing gateway.
+  Future<void> meshUnsubscribeGatewayGroup() async {
+    if (selectedNode == null) return;
+    try {
+      final elements = await selectedNode!.elements;
+      const groupAddress = 0xC000;
+
+      for (final element in elements) {
+        for (final model in element.models) {
+          if (model.modelId == 0x1102) {
+            await meshController.meshManagerApi.sendConfigModelSubscriptionDelete(
+              element.address,
+              groupAddress,
+              model.modelId,
+            );
+            debugPrint(
+              "Unsubscribed model ${model.modelId} from group $groupAddress",
+            );
+            await Future.delayed(const Duration(seconds: 2));
+          }
+        }
+      }
+    } catch (e, st) {
+      debugPrint("meshUnsubscribeGatewayGroup error: $e\n$st");
+    }
+  }
+
+
+  Future<void> meshProvisioning(DiscoveredDevice device) async {
     try {
       final elements = await selectedNode!.elements;
       const groupAddress = 0xC000;

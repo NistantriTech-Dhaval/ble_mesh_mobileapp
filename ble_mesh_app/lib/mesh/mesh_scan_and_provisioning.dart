@@ -14,13 +14,14 @@ import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class ScanningAndProvisioning extends StatefulWidget {
-  final int deviceNetworkTypeId;
   final String? meshNetworkId;
+  /// When true, after provisioning completes navigate back to NetworkDevicesPage instead of ProvisionedDevicesPage.
+  final bool returnToNetworkDevicesPage;
 
   ScanningAndProvisioning({
     Key? key,
-    required this.deviceNetworkTypeId,
     this.meshNetworkId,
+    this.returnToNetworkDevicesPage = false,
   }) : super(key: key);
 
   @override
@@ -226,17 +227,12 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
 
                               return GestureDetector(
                                 onTap: () async {
-                                  if(widget.deviceNetworkTypeId==1){
-                                    controller.provisionDevice(
-                                      device,
-                                      context,
-                                      meshNetworkId: widget.meshNetworkId,
-                                    );
-                                  }else{
-                                   await controller.stopScan();
-                                    Get.to(WifiProvisioningPage(deviceName: device.name,deviceNetworkTypeId: widget.deviceNetworkTypeId));
-                                  }
-
+                                  controller.provisionDevice(
+                                    device,
+                                    context,
+                                    meshNetworkId: widget.meshNetworkId,
+                                    returnToNetworkDevicesPage: widget.returnToNetworkDevicesPage,
+                                  );
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(

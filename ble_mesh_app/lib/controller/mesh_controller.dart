@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/Comman_Widget/custom_snackbar.dart';
-import 'package:ntpl_ble_mesh_demo/mesh/provisioned_devices_page.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -63,7 +62,7 @@ class MeshController extends GetxController {
     await meshManagerApi.loadMeshNetwork();
   }
 
-  /// Loads mesh network for commissioning: if [meshNetworkId] is set and that asset has meshNetworkJson attribute, imports from ThingsBoard; otherwise loads from local storage.
+  /// Loads mesh for **this** network only. If [meshNetworkId] is set: imports this asset's meshNetworkJson from ThingsBoard when present; otherwise starts a fresh empty mesh. Never loads from local storage when a network is selected, so we never use another network's mesh (where the device may already exist) and avoid "node UUID already exists".
   Future<void> loadMeshNetworkForCommissioning(String? meshNetworkId) async {
     void _update(IMeshNetwork? network) async {
       meshNetwork.value = network;
@@ -86,6 +85,10 @@ class MeshController extends GetxController {
           await meshManagerApi.importMeshNetworkJson(json.toString());
           return;
         }
+        // This network has no mesh yet. Start fresh; do not load from local storage (that may be another network where the device was already added).
+        await meshManagerApi.resetMeshNetwork();
+        await Future.delayed(const Duration(milliseconds: 600));
+        return;
       } catch (_) {}
     }
     await meshManagerApi.loadMeshNetwork();
@@ -176,6 +179,7 @@ class MeshController extends GetxController {
     DiscoveredDevice device,
     BuildContext context, {
     String? meshNetworkId,
+    bool returnToNetworkDevicesPage = false,
   }) async {
     statusText.value="Provisioning is in process...";
     if (isScanning.value) {
@@ -327,7 +331,7 @@ class MeshController extends GetxController {
               MeshDeviceAttrKeys.meshNodeUuid: deviceUUID,
               MeshDeviceAttrKeys.bleDeviceId: device.id.toString(),
               MeshDeviceAttrKeys.macAddress: device.name ?? '',
-              MeshDeviceAttrKeys.isGateway: true,
+              MeshDeviceAttrKeys.isGateway: false,
             };
             // Create device in ThingsBoard using MAC (in selected asset), store required info, link to asset
             await netCtrl.createAndLinkDevice(
@@ -335,19 +339,11 @@ class MeshController extends GetxController {
               deviceDisplayName,
               details: details,
             );
-            // Set this provisioned device as gateway for the network (replaces any existing gateway)
-            await netCtrl.setGateway(meshNetworkId, unicast);
           } catch (_) {}
         }
-        // Wait 2 seconds then navigate
+        // Wait then navigate
         await Future.delayed(const Duration(seconds: 6));
-        // Navigate directly using GetX
-        Get.to(ProvisionedDevicesPage(
-          device: device,
-          deviceNetworkTypeId: 1,
-          meshNode: provisionedMeshNodeF,
-          meshNetworkId: meshNetworkId,
-        ));
+          Get.back();
         isProvisioning.value = false;
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);

@@ -3,20 +3,19 @@ import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/Comman_Widget/app_bar.dart';
 import 'package:ntpl_ble_mesh_demo/Comman_Widget/custom_button.dart';
 import 'package:ntpl_ble_mesh_demo/controller/mesh_network_controller.dart';
-import 'package:ntpl_ble_mesh_demo/mesh/mesh_scan_and_provisioning.dart';
+import 'package:ntpl_ble_mesh_demo/mesh/network_devices_page.dart';
 import 'package:thingsboard_client/thingsboard_client.dart';
 
 import '../Comman_Widget/circular_progressbar.dart';
 import '../constant/appColors.dart';
 
 class MeshNetworkListPage extends StatefulWidget {
-  final int deviceCount;
-  final int leafystickCount;
+  /// When true, only the body is built (no Scaffold/AppBar). Use when embedding in a shell (e.g. HomePage Mesh Network tab).
+  final bool embedInShell;
 
   const MeshNetworkListPage({
     super.key,
-    required this.deviceCount,
-    required this.leafystickCount,
+    this.embedInShell = false,
   });
 
   @override
@@ -81,7 +80,9 @@ class _MeshNetworkListPageState extends State<MeshNetworkListPage> {
                     ? null
                     : _descController.text,
               );
-              if (ok && mounted) Get.back();
+              if (ok && mounted) {
+                Navigator.of(context).pop();
+              }
             },
             child: const Text('Add'),
           ),
@@ -95,22 +96,16 @@ class _MeshNetworkListPageState extends State<MeshNetworkListPage> {
     if (id == null) return;
     controller.selectedNetworkId.value = id;
     Get.to(
-      () => ScanningAndProvisioning(
-        deviceNetworkTypeId: 1,
+      () => NetworkDevicesPage(
         meshNetworkId: id,
+        networkName: info.name ?? 'Network',
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CustomAppBar(
-        showBack: true,
-        title: 'Select Mesh Network',
-      ),
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Container(
+    final body = Container(
         padding: const EdgeInsets.only(left: 24, right: 24, bottom: 34, top: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +213,17 @@ class _MeshNetworkListPageState extends State<MeshNetworkListPage> {
             ),
           ],
         ),
+      );
+
+    if (widget.embedInShell) return body;
+
+    return Scaffold(
+      appBar: const CustomAppBar(
+        showBack: true,
+        title: 'Select Mesh Network',
       ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: body,
     );
   }
 }

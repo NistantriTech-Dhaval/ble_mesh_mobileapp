@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/constant/assets_path.dart';
 import 'package:ntpl_ble_mesh_demo/controller/thingsboard_controller.dart';
-import 'package:ntpl_ble_mesh_demo/mesh/leafy_device_count_page.dart';
+import 'package:ntpl_ble_mesh_demo/screens/home_page.dart';
 import 'package:ntpl_ble_mesh_demo/screens/login_page.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       final tb = Get.find<ThingsBoardController>();
       await tb.ensureValidToken();
       if (tb.isAuthenticated) {
-        Get.off(() => const LeafyDeviceCountPage());
+        Get.off(() => const HomePage());
       } else {
         Get.off(() => const LoginPage());
       }

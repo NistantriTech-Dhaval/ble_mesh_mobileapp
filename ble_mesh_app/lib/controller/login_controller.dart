@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/Comman_Widget/custom_snackbar.dart';
 import 'package:ntpl_ble_mesh_demo/controller/thingsboard_controller.dart';
-import 'package:ntpl_ble_mesh_demo/mesh/leafy_device_count_page.dart';
+import 'package:ntpl_ble_mesh_demo/screens/home_page.dart';
 
 class LoginController extends GetxController {
   final usernameController = TextEditingController(text: "dhaval+mesh@nistantritech.com");
@@ -48,7 +48,7 @@ class LoginController extends GetxController {
       final ok = await tb.login(username, password);
       if (ok) {
         AppSnackBar.show('success', 'Login successful.');
-        Get.off(() => const LeafyDeviceCountPage());
+        Get.off(() => const HomePage());
       } else {
         AppSnackBar.show('error', 'Invalid email or password.');
       }

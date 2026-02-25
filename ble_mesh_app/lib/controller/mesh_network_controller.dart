@@ -155,7 +155,11 @@ class MeshNetworkController extends GetxController {
             );
       }
       AppSnackBar.show('success', 'Network added.');
-      await fetchNetworks();
+      try {
+        await fetchNetworks();
+      } catch (_) {
+        // List refresh failed but add succeeded; dialog should still close
+      }
       return true;
     } catch (e) {
       AppSnackBar.show('error', 'Failed to add network.');
@@ -237,7 +241,9 @@ class MeshNetworkController extends GetxController {
     try {
       final name = deviceName.trim().isEmpty ? 'Mesh Device ${DateTime.now().millisecondsSinceEpoch}' : deviceName.trim();
       final device = Device(name, meshDeviceType);
-      device.label = 'BLE Mesh provisioned device';
+      device.label = 'BLE Mesh';
+      device.additionalInfo ??= {};
+      device.additionalInfo!['gateway'] = true;
       final saved = await _tb.tbClient.getDeviceService().saveDevice(device);
       final deviceId = saved.id?.id;
       if (deviceId == null) return null;
@@ -279,16 +285,55 @@ class MeshNetworkController extends GetxController {
     return int.tryParse(v.toString());
   }
 
-  /// Clears the gateway for this mesh network (removes existing gateway).
+  /// Removes the gateway for this mesh network: clears asset gatewayUnicastAddress, sets the gateway device's isGateway attribute and additionalInfo.gateway to false.
   Future<bool> clearGateway(String assetIdStr) async {
     if (!_tb.isAuthenticated) return false;
     try {
+      final oldUnicast = await getGatewayUnicast(assetIdStr);
       final assetId = AssetId(assetIdStr);
       await _tb.tbClient.getAttributeService().saveEntityAttributesV1(
             assetId,
             _attrScope,
             <String, dynamic>{MeshNetworkAttrKeys.gatewayUnicastAddress: null},
           );
+      if (oldUnicast != null) {
+        try {
+          final relations = await _tb.tbClient.getEntityRelationService().findByFrom(
+                assetId,
+                relationType: 'Contains',
+                relationTypeGroup: RelationTypeGroup.COMMON,
+              );
+          final attributeService = _tb.tbClient.getAttributeService();
+          for (final rel in relations) {
+            final toId = rel.to?.id;
+            if (toId == null) continue;
+            final devId = DeviceId(toId);
+            final attrs = await attributeService.getAttributesByScope(
+                  devId,
+                  _attrScope,
+                  [MeshDeviceAttrKeys.unicastAddress],
+                );
+            int? deviceUnicast;
+            for (final attr in attrs) {
+              if (attr.getKey() == MeshDeviceAttrKeys.unicastAddress && attr.getValue() != null) {
+                final v = attr.getValue();
+                if (v is int) deviceUnicast = v;
+                else if (v is num) deviceUnicast = v.toInt();
+                else deviceUnicast = int.tryParse(v.toString());
+                break;
+              }
+            }
+            if (deviceUnicast == oldUnicast) {
+              await attributeService.saveEntityAttributesV1(
+                    devId,
+                    _attrScope,
+                    <String, dynamic>{MeshDeviceAttrKeys.isGateway: false},
+                  );
+              break;
+            }
+          }
+        } catch (_) {}
+      }
       return true;
     } catch (_) {
       return false;
@@ -296,15 +341,12 @@ class MeshNetworkController extends GetxController {
   }
 
   /// Sets the gateway for this mesh network. Removes any existing gateway first, then sets the new one.
-  /// Also updates device attributes: old gateway device gets isGateway=false, new gateway device gets isGateway=true.
+  /// Updates both: (1) asset attribute gatewayUnicastAddress, (2) each device's isGateway attribute in ThingsBoard.
   Future<bool> setGateway(String assetIdStr, int unicastAddress) async {
     if (!_tb.isAuthenticated) return false;
     try {
       // 1) Get old gateway unicast before clearing
       final oldGatewayUnicast = await getGatewayUnicast(assetIdStr);
-      
-      // 2) Clear old gateway and set new gateway in asset
-      await clearGateway(assetIdStr);
       final assetId = AssetId(assetIdStr);
       final now = DateTime.now().millisecondsSinceEpoch;
       await _tb.tbClient.getAttributeService().saveEntityAttributesV1(
@@ -315,72 +357,134 @@ class MeshNetworkController extends GetxController {
               MeshNetworkAttrKeys.lastModified: now,
             },
           );
-      
-      // 3) Update device attributes: find devices related to this asset and update isGateway flags
-      try {
-        final assetIdForRelations = AssetId(assetIdStr);
-        final relations = await _tb.tbClient.getEntityRelationService().findByFrom(
-              assetIdForRelations,
-              relationType: 'Contains',
-              relationTypeGroup: RelationTypeGroup.COMMON,
-            );
-        final attributeService = _tb.tbClient.getAttributeService();
-        
-        for (final rel in relations) {
-          final toId = rel.to;
-          if (toId == null) continue;
-          final deviceIdStr = toId.id;
-          if (deviceIdStr == null) continue;
-          
-          try {
-            final devId = DeviceId(deviceIdStr);
-            // Get device attributes to check unicastAddress
-            final deviceAttrs = await attributeService.getAttributesByScope(
+
+      // 3) Update device attributes in ThingsBoard: set isGateway false on old gateway device, true on new gateway device
+      final attributeService = _tb.tbClient.getAttributeService();
+      final relations = await _tb.tbClient.getEntityRelationService().findByFrom(
+            AssetId(assetIdStr),
+            relationType: 'Contains',
+            relationTypeGroup: RelationTypeGroup.COMMON,
+          );
+
+      for (final rel in relations) {
+        final toId = rel.to;
+        if (toId == null) continue;
+        final deviceIdStr = toId.id;
+        if (deviceIdStr == null) continue;
+
+        try {
+          final devId = DeviceId(deviceIdStr);
+          final deviceAttrs = await attributeService.getAttributesByScope(
+                devId,
+                _attrScope,
+                [MeshDeviceAttrKeys.unicastAddress],
+              );
+          int? deviceUnicast;
+          for (final attr in deviceAttrs) {
+            final key = attr.getKey();
+            final val = attr.getValue();
+            if (key == MeshDeviceAttrKeys.unicastAddress && val != null) {
+              if (val is int) {
+                deviceUnicast = val;
+              } else if (val is num) {
+                deviceUnicast = val.toInt();
+              } else {
+                deviceUnicast = int.tryParse(val.toString());
+              }
+              break;
+            }
+          }
+
+          if (deviceUnicast == null) continue;
+
+          final isNewGateway = deviceUnicast == unicastAddress;
+          final isOldGateway = oldGatewayUnicast != null && deviceUnicast == oldGatewayUnicast;
+
+          if (isNewGateway || isOldGateway) {
+            await attributeService.saveEntityAttributesV1(
                   devId,
                   _attrScope,
-                  [MeshDeviceAttrKeys.unicastAddress],
+                  <String, dynamic>{MeshDeviceAttrKeys.isGateway: isNewGateway},
                 );
-            int? deviceUnicast;
-            for (final attr in deviceAttrs) {
-              final key = attr.getKey();
-              final val = attr.getValue();
-              if (key == MeshDeviceAttrKeys.unicastAddress && val != null) {
-                if (val is int) {
-                  deviceUnicast = val;
-                } else if (val is num) {
-                  deviceUnicast = val.toInt();
-                } else {
-                  deviceUnicast = int.tryParse(val.toString());
-                }
-                break;
-              }
+            final device = await _tb.tbClient.getDeviceService().getDevice(deviceIdStr);
+            if (device != null) {
+              device.additionalInfo ??= {};
+              device.additionalInfo!['gateway'] = isNewGateway;
+              await _tb.tbClient.getDeviceService().saveDevice(device);
             }
-            
-            if (deviceUnicast != null) {
-              // Update isGateway: false for old gateway, true for new gateway
-              final isNewGateway = deviceUnicast == unicastAddress;
-              final isOldGateway = oldGatewayUnicast != null && deviceUnicast == oldGatewayUnicast;
-              
-              if (isNewGateway || isOldGateway) {
-                await attributeService.saveEntityAttributesV1(
-                      devId,
-                      _attrScope,
-                      <String, dynamic>{MeshDeviceAttrKeys.isGateway: isNewGateway},
-                    );
-              }
-            }
-          } catch (_) {
-            // Skip devices that fail to update
           }
+        } catch (_) {
+          // Skip devices that fail to update
         }
-      } catch (_) {
-        // If device attribute update fails, gateway is still set in asset, so continue
       }
-      
+
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  /// Fetches devices related to this mesh network asset with unicast for each device.
+  /// Returns list of maps: id, name, label (optional), unicast (int), isGateway (bool). Devices without unicast are skipped.
+  Future<List<Map<String, dynamic>>> getDevicesWithUnicastRelatedToAsset(String assetIdStr) async {
+    final list = <Map<String, dynamic>>[];
+    if (!_tb.isAuthenticated) return list;
+    try {
+      final gatewayUnicast = await getGatewayUnicast(assetIdStr);
+      final assetId = AssetId(assetIdStr);
+      final relations = await _tb.tbClient.getEntityRelationService().findByFrom(
+            assetId,
+            relationType: 'Contains',
+            relationTypeGroup: RelationTypeGroup.COMMON,
+          );
+      final deviceService = _tb.tbClient.getDeviceService();
+      final attributeService = _tb.tbClient.getAttributeService();
+      for (final rel in relations) {
+        final toId = rel.to;
+        if (toId == null) continue;
+        final idStr = toId.id;
+        if (idStr == null) continue;
+        try {
+          final device = await deviceService.getDevice(idStr);
+          final deviceAttrs = await attributeService.getAttributesByScope(
+               EntityId.fromTypeAndUuid(EntityType.DEVICE, idStr),
+                _attrScope,
+                [MeshDeviceAttrKeys.unicastAddress, MeshDeviceAttrKeys.isGateway],
+              );
+          int? unicast;
+          bool? isGatewayFromDevice;
+          for (final attr in deviceAttrs) {
+            final key = attr.getKey();
+            final val = attr.getValue();
+            if (key == MeshDeviceAttrKeys.unicastAddress && val != null) {
+              if (val is int) {
+                unicast = val;
+              } else if (val is num) {
+                unicast = val.toInt();
+              } else {
+                unicast = int.tryParse(val.toString());
+              }
+            } else if (key == MeshDeviceAttrKeys.isGateway && val != null) {
+              isGatewayFromDevice = val == true || val == 1 || (val is String && (val == 'true' || val == '1'));
+            }
+          }
+          if (unicast == null) continue;
+          final isGateway = isGatewayFromDevice ?? (gatewayUnicast != null && unicast == gatewayUnicast);
+          list.add({
+            'id': idStr,
+            'name': device?.name ?? 'Device',
+            if (device?.label != null && device!.label!.isNotEmpty) 'label': device.label!,
+            'unicast': unicast,
+            'isGateway': isGateway,
+          });
+        } catch (e) {
+          print(e);
+        }
+      }
+    } catch (e) {
+      print(e);
+    }
+    return list;
   }
 
   /// Fetches devices related to this mesh network asset (Asset -> Contains -> Device).
@@ -416,6 +520,57 @@ class MeshNetworkController extends GetxController {
       }
     } catch (_) {}
     return list;
+  }
+
+  /// Returns the ThingsBoard device access token for the device with the given unicast in this asset, or null.
+  Future<String?> getDeviceAccessToken(String assetIdStr, int unicastAddress) async {
+    if (!_tb.isAuthenticated) return null;
+    try {
+      final assetId = AssetId(assetIdStr);
+      final relations = await _tb.tbClient.getEntityRelationService().findByFrom(
+            assetId,
+            relationType: 'Contains',
+            relationTypeGroup: RelationTypeGroup.COMMON,
+          );
+      final attributeService = _tb.tbClient.getAttributeService();
+      final deviceService = _tb.tbClient.getDeviceService();
+      for (final rel in relations) {
+        final toId = rel.to;
+        if (toId == null) continue;
+        final deviceIdStr = toId.id;
+        if (deviceIdStr == null) continue;
+        try {
+          final devId = DeviceId(deviceIdStr);
+          final deviceAttrs = await attributeService.getAttributesByScope(
+                devId,
+                _attrScope,
+                [MeshDeviceAttrKeys.unicastAddress],
+              );
+          int? deviceUnicast;
+          for (final attr in deviceAttrs) {
+            final key = attr.getKey();
+            final val = attr.getValue();
+            if (key == MeshDeviceAttrKeys.unicastAddress && val != null) {
+              if (val is int) {
+                deviceUnicast = val;
+              } else if (val is num) {
+                deviceUnicast = val.toInt();
+              } else {
+                deviceUnicast = int.tryParse(val.toString());
+              }
+              break;
+            }
+          }
+          if (deviceUnicast != unicastAddress) continue;
+          final creds = await deviceService.getDeviceCredentialsByDeviceId(deviceIdStr);
+          if (creds != null && creds.credentialsId != null && creds.credentialsId!.isNotEmpty) {
+            return creds.credentialsId;
+          }
+          return null;
+        } catch (_) {}
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Returns the ThingsBoard device name (e.g. MAC) for the device with the given unicast in this asset, or null.

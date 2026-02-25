@@ -13,14 +13,12 @@ import '../constant/appColors.dart';
 
 class WifiProvisioningPage extends StatefulWidget {
   final String deviceName;
-  final int deviceNetworkTypeId;
   final String? meshNetworkId;
   final int? gatewayUnicast;
 
   WifiProvisioningPage({
     Key? key,
     required this.deviceName,
-    required this.deviceNetworkTypeId,
     this.meshNetworkId,
     this.gatewayUnicast,
   }) : super(key: key);
@@ -178,7 +176,6 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                               onPressed: () async {
                                 await controller.connectWithNode(
                                   widget.deviceName,
-                                  widget.deviceNetworkTypeId,
                                   meshNetworkId: widget.meshNetworkId,
                                   gatewayUnicast: widget.gatewayUnicast,
                                 );
@@ -485,7 +482,6 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                         controller.selectedWifi.value = deviceName;
                         await controller.connectWithNode(
                           widget.deviceName,
-                          widget.deviceNetworkTypeId,
                           meshNetworkId: widget.meshNetworkId,
                           gatewayUnicast: widget.gatewayUnicast,
                         );
