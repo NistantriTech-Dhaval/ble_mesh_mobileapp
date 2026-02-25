@@ -629,6 +629,26 @@ class MeshNetworkController extends GetxController {
     return null;
   }
 
+  /// Removes the device from the mesh network asset (deletes Asset->Device relation) and deletes the device from ThingsBoard.
+  /// Call after the node has been removed from the mesh (deprovision + deleteNode) and mesh attributes saved.
+  Future<bool> removeDeviceFromAssetAndDelete(String assetIdStr, String deviceId) async {
+    if (!_tb.isAuthenticated) return false;
+    try {
+      final assetId = AssetId(assetIdStr);
+      final devId = DeviceId(deviceId);
+      await _tb.tbClient.getEntityRelationService().deleteRelation(
+            assetId,
+            'Contains',
+            RelationTypeGroup.COMMON,
+            devId,
+          );
+      await _tb.tbClient.getDeviceService().deleteDevice(deviceId);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Returns asset id as string for navigation/selection.
   String? assetIdToString(AssetId? id) {
     if (id == null) return null;

@@ -58,7 +58,10 @@ class NetworkDevicesPage extends StatelessWidget {
   ) async {
     Get.dialog(
       Obx(() => AlertDialog(
-        title: const Text('Remove gateway'),
+        title: Text('Remove gateway',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+          )),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -84,6 +87,68 @@ class NetworkDevicesPage extends StatelessWidget {
     );
     await c.removeGateway();
     if (Get.isDialogOpen == true) Get.back();
+  }
+
+  static Future<void> _removeDeviceWithDialog(
+    BuildContext context,
+    NetworkDevicesController c,
+    Map<String, dynamic> device,
+  ) async {
+    final name = device['name'] as String? ?? 'Device';
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(
+          'Remove device',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Remove "$name"? Keep device in range.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textPrimary,
+              ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    Get.dialog(
+      AlertDialog(
+        title: Text(
+          'Removing device',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressLoader(
+              size: 40,
+              color: AppColors.darkBlue,
+              strokeWidth: 7,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Please wait...',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
+    await c.removeDevice(device);
+    Get.back(closeOverlays: true);
   }
 
   Widget _buildBody(BuildContext context, NetworkDevicesController c) {
@@ -161,50 +226,87 @@ class NetworkDevicesPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                SizedBox(
-                  height: 40,
-                  child: isGateway
-                      ? ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.darkBlue.withOpacity(0.9),
-                            foregroundColor: Colors.white,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 40,
+                      child: isGateway
+                          ? ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.darkBlue.withOpacity(0.9),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: c.removingGatewayUnicast.value != null ||
+                                      c.removingDeviceUnicast.value != null
+                                  ? null
+                                  : () => _removeGatewayWithDialog(context, c),
+                              child: const Text(
+                                'Remove gateway',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              ),
+                            )
+                          : ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.darkgreen,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: unicast == null ||
+                                      isSetting ||
+                                      c.removingDeviceUnicast.value != null
+                                  ? null
+                                  : () => c.setAsGateway(d),
+                              child: isSetting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Set as Gateway',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                                    ),
+                            ),
+                    ),
+                    if (unicast != null) ...[
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        height: 40,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                            side: BorderSide(color: Colors.red.shade300),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: c.removingGatewayUnicast.value != null
+                          onPressed: c.removingDeviceUnicast.value != null ||
+                                  c.removingGatewayUnicast.value != null
                               ? null
-                              : () => _removeGatewayWithDialog(context, c),
-                          child: const Text(
-                            'Remove gateway',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                          ),
-                        )
-                      : ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.darkgreen,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          onPressed: unicast == null || isSetting
-                              ? null
-                              : () => c.setAsGateway(d),
-                          child: isSetting
+                              : () => _removeDeviceWithDialog(context, c, d),
+                          child: c.removingDeviceUnicast.value == unicast
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Text(
-                                  'Set as Gateway',
+                                  'Remove',
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                                 ),
                         ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

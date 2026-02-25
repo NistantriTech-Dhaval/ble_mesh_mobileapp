@@ -285,6 +285,66 @@ class ProvisionedDeviceController extends GetxController {
     return a.isNotEmpty && (a == e || a.contains(e) || e.contains(a));
   }
 
+  /// Connects to the device by name via proxy scan and sends ConfigNodeReset (deprovision) so the device returns to provisioning mode.
+  Future<bool> connectAndDeprovision(String deviceName, ProvisionedMeshNode node) async {
+    DiscoveredDevice? selectedDevice;
+    try {
+      await Future.delayed(const Duration(milliseconds: 1500));
+      for (var attempt = 0; attempt < 2; attempt++) {
+        if (attempt > 0) {
+          debugPrint("Deprovision: retry scan...");
+          await Future.delayed(const Duration(seconds: 2));
+        }
+        final completer = Completer<void>();
+        final sub = meshController.nordicNrfMesh.scanForProxy().listen(
+          (device) {
+            if (_deviceNameMatches(device.name, deviceName)) {
+              selectedDevice = device;
+              if (!completer.isCompleted) completer.complete();
+            }
+          },
+          onError: (err) {
+            debugPrint("Scan error: $err");
+            if (!completer.isCompleted) completer.complete();
+          },
+        );
+        try {
+          await completer.future.timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {},
+          );
+        } on TimeoutException {
+          // No device found in 8s
+        }
+        await sub.cancel();
+        if (selectedDevice != null) break;
+      }
+      if (selectedDevice == null) {
+        debugPrint("Deprovision: device '$deviceName' not found after scan");
+        return false;
+      }
+
+      meshController.bleMeshManager.callbacks = DoozProvisionedBleMeshManagerCallbacks(
+        meshController.meshManagerApi,
+        meshController.bleMeshManager,
+      );
+      await meshController.bleMeshManager.disconnect();
+      await meshController.bleMeshManager.connect(
+        selectedDevice!,
+        connectionTimeout: const Duration(seconds: 10),
+      );
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      final status = await meshController.meshManagerApi.deprovision(node);
+      await meshController.bleMeshManager.disconnect();
+      return status.success;
+    } catch (e) {
+      debugPrint("connectAndDeprovision error: $e");
+      await meshController.bleMeshManager.disconnect();
+      return false;
+    }
+  }
+
   /// Connects to the device by name (mesh proxy scan) and sends config with isgateway: false to clear gateway role on the device.
   Future<bool> connectAndSendRemoveGateway(String deviceName) async {
     DiscoveredDevice? selectedDevice;

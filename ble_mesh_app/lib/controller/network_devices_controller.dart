@@ -25,6 +25,10 @@ class NetworkDevicesController extends GetxController {
   final removingGatewayUnicast = Rxn<int>();
   /// Progress or error message during remove-gateway flow.
   final removeGatewayStatus = ''.obs;
+  /// Unicast of device currently being removed from network (so firmware returns to provisioning, removed from asset, deleted from ThingsBoard).
+  final removingDeviceUnicast = Rxn<int>();
+  /// Progress or error message during remove-device flow.
+  final removeDeviceStatus = ''.obs;
 
   @override
   void onInit() {
@@ -87,6 +91,66 @@ class NetworkDevicesController extends GetxController {
       AppSnackBar.show('error', 'Failed to remove gateway');
     } finally {
       removingGatewayUnicast.value = null;
+    }
+  }
+
+  /// Removes device from network: deprovision (firmware returns to provisioning mode), delete from mesh, remove from asset, delete from ThingsBoard.
+  Future<void> removeDevice(Map<String, dynamic> device) async {
+    final unicast = device['unicast'] as int?;
+    final deviceId = device['id'] as String?;
+    final deviceName = device['name'] as String? ?? 'Device';
+    if (unicast == null || deviceId == null) {
+      AppSnackBar.show('error', 'Device info missing');
+      return;
+    }
+    if (removingDeviceUnicast.value != null) return;
+    removingDeviceUnicast.value = unicast;
+    try {
+      if (device['isGateway'] == true) {
+        await netController.clearGateway(meshNetworkId);
+      }
+      await meshController.loadMeshNetworkForCommissioning(meshNetworkId);
+      await Future.delayed(const Duration(milliseconds: 500));
+      final nodes = await meshController.meshNetwork.value?.nodes ?? [];
+      ProvisionedMeshNode? node;
+      for (final n in nodes) {
+        final u = await n.unicastAddress;
+        if (u == unicast) {
+          node = n;
+          break;
+        }
+      }
+      if (node == null) {
+        AppSnackBar.show('error', 'Device not found in mesh');
+        return;
+      }
+      provController.selectedNode = node;
+      final deprovisioned = await provController.connectAndDeprovision(deviceName, node);
+      if (!deprovisioned) {
+        AppSnackBar.show('error', 'Keep device in range and try again.');
+        return;
+      }
+      await meshController.meshManagerApi.meshNetwork!.deleteNode(node.uuid);
+      final exported = await meshController.meshManagerApi.exportMeshNetwork();
+      if (exported != null) {
+        final nodeCount = (await meshController.meshNetwork.value?.nodes)?.length ?? 0;
+        await netController.saveMeshNetworkAttributes(
+          meshNetworkId,
+          meshNetworkJson: exported,
+          deviceCount: nodeCount,
+        );
+      }
+      final ok = await netController.removeDeviceFromAssetAndDelete(meshNetworkId, deviceId);
+      if (!ok) {
+        AppSnackBar.show('error', 'Cloud update failed');
+      } else {
+        AppSnackBar.show('success', 'Device removed');
+      }
+      await loadDevices();
+    } catch (e) {
+      AppSnackBar.show('error', 'Failed to remove device');
+    } finally {
+      removingDeviceUnicast.value = null;
     }
   }
 
