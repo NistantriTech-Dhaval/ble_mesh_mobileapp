@@ -181,6 +181,7 @@ class NetworkDevicesPage extends StatelessWidget {
         ),
       );
     }
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 88),
       itemCount: c.devices.length,
