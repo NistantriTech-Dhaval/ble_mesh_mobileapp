@@ -236,16 +236,21 @@ class MeshController extends GetxController {
         );
         await bleMeshManager.connect(device);
 
+        // App side – Node: set Model Publication for the node's Sensor Server (0x1100) to group 0xC000
+        // and bind AppKey. The node then publishes to that group (firmware publishes data every 10 s;
+        // firmware does not set the publication address – the app configures it here).
+        // Gateway side is in provisioned_device_controller: subscribe Sensor Client (0x1102) to 0xC000.
         const groupAddress = 0xC000;
         final elements = await provisionedMeshNodeF.elements;
 
+        // 1. Bind AppKey to all app models (same key used for publishing).
         for (var element in elements) {
           for (var model in element.models) {
             if (model.boundAppKey.isEmpty) {
               final isPrimaryElement = element == elements.first;
               final isFirstModel = model == element.models.first;
 
-              // Skip binding for primary element first model
+              // Skip binding for primary element first model (Config Server)
               if (isPrimaryElement && isFirstModel) continue;
 
               final unicast = await provisionedMeshNodeF.unicastAddress;
@@ -268,13 +273,13 @@ class MeshController extends GetxController {
           }
         }
 
-        // // 2.Publish
+        // 2. Sensor Server (0x1100): set Model Publication to group 0xC000 (node publishes to this group; firmware only publishes data every 10 s).
         for (final element in elements) {
           for (final model in element.models) {
             final modelId = model.modelId;
-            final isSensorModel = modelId == 0x1100;
+            final isSensorModel = modelId == 0x1100; // Sensor Server
             if (isSensorModel) {
-              debugPrint('Publishing to model: $modelId');
+              debugPrint('Setting Sensor Server (0x1100) publication to group $groupAddress (every 10 s)');
               await meshManagerApi
                   .sendConfigModelPublicationSet(
                     element.address,
@@ -283,8 +288,8 @@ class MeshController extends GetxController {
                     appKeyIndex: 0,
                     credentialFlag: false,
                     publishTtl: 15,
-                    publicationSteps:
-                        100, // Publish every 1 step// Step = 100ms => 100ms interval
+                    publicationSteps: 1,
+                    publicationResolution: 2, // 2 = 10 s per step; 1 step => 10 s period
                     retransmitCount: 0,
                     retransmitIntervalSteps: 0,
                   )

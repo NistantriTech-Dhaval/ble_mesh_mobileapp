@@ -510,17 +510,18 @@ class ProvisionedDeviceController extends GetxController {
     }
   }
 
-  /// Removes the gateway group (0xC000) subscription from the [selectedNode] so it
-  /// no longer receives data from other nodes. Call when removing gateway.
+  /// Removes gateway subscriptions to group 0xC000 from [selectedNode]: Sensor Client (0x1102)
+  /// and Generic OnOff Client (0x1001, bulb status). Call when removing gateway.
   Future<void> meshUnsubscribeGatewayGroup() async {
     if (selectedNode == null) return;
     try {
       final elements = await selectedNode!.elements;
       const groupAddress = 0xC000;
+      const gatewaySubscriptionModels = [0x1102, 0x1001]; // Sensor Client, Generic OnOff Client
 
       for (final element in elements) {
         for (final model in element.models) {
-          if (model.modelId == 0x1102) {
+          if (gatewaySubscriptionModels.contains(model.modelId)) {
             await meshController.meshManagerApi.sendConfigModelSubscriptionDelete(
               element.address,
               groupAddress,
@@ -539,16 +540,20 @@ class ProvisionedDeviceController extends GetxController {
   }
 
 
+  /// App side – Gateway: subscribe Sensor Client (0x1102) and Generic OnOff Client (0x1001, bulb status)
+  /// to group 0xC000 so the gateway receives sensor and bulb status. When data is received, the app
+  /// (or firmware on gateway) sends to ThingBoard: own data → device API, other nodes' → gateway API.
   Future<void> meshProvisioning(DiscoveredDevice device) async {
     try {
       final elements = await selectedNode!.elements;
       const groupAddress = 0xC000;
+      const gatewaySubscriptionModels = [0x1102, 0x1001]; // Sensor Client, Generic OnOff Client
 
       for (final element in elements) {
         debugPrint("Processing element ${element.address}");
 
         for (final model in element.models) {
-          // Ensure appKey binding
+          // Bind AppKey so gateway can receive with same key nodes use to publish.
           if (model.boundAppKey.isEmpty &&
               !(element == elements.first && model == element.models.first)) {
             final unicast = await selectedNode?.unicastAddress;
@@ -562,8 +567,8 @@ class ProvisionedDeviceController extends GetxController {
             }
           }
 
-          // Add subscription for specific model
-          if (model.modelId == 0x1102) {
+          // Sensor Client (0x1102) and Generic OnOff Client (0x1001): subscribe to group 0xC000.
+          if (gatewaySubscriptionModels.contains(model.modelId)) {
             await  meshController.meshManagerApi.sendConfigModelSubscriptionAdd(
               element.address,
               groupAddress,
