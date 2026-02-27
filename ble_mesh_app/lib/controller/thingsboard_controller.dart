@@ -48,6 +48,9 @@ class ThingsBoardController extends GetxController {
   /// Current auth user (null if not logged in).
   AuthUser? get authUser => _client.getAuthUser();
 
+  /// JWT token for WebSocket or other API use. Null if not authenticated.
+  String? get jwtToken => _client.getJwtToken();
+
   /// On app start/resume: loads stored tokens from storage, then if valid returns true; if not, tries to refresh.
   Future<bool> ensureValidToken() async {
     try {

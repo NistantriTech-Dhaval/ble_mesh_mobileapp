@@ -56,6 +56,31 @@ class NetworkDevicesPage extends StatelessWidget {
     BuildContext context,
     NetworkDevicesController c,
   ) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(
+          'Confirm Removal',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Are you sure you want to remove this gateway?',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     Get.dialog(
       Obx(() => AlertDialog(
         title: Text('Remove gateway',
@@ -183,7 +208,7 @@ class NetworkDevicesPage extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 88),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 88),
       itemCount: c.devices.length,
       itemBuilder: (context, i) {
         final d = c.devices[i];
@@ -192,122 +217,235 @@ class NetworkDevicesPage extends StatelessWidget {
         final unicast = d['unicast'] as int?;
         final isGateway = d['isGateway'] == true;
         final isSetting = c.settingGatewayUnicast.value == unicast;
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: AppColors.grayLight),
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: isGateway
+                  ? AppColors.darkBlue.withValues(alpha: 0.35)
+                  : AppColors.grayLight,
+              width: 1,
+            ),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.devices, color: AppColors.darkBlue, size: 28),
-                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkBlue.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isGateway ? Icons.router_rounded : Icons.memory_rounded,
+                    color: AppColors.darkBlue,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        name,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
+                      Row(
+                        children: [
+                          Text(
+                                  name,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                          Spacer(),
+                          if (unicast != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.pin_drop_rounded,
+                                  size: 12,
+                                  color: AppColors.blue,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Unicast $unicast',
+                                  style:
+                                  Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.blue,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
                             ),
-                        overflow: TextOverflow.ellipsis,
+                          ],
+                        ],
                       ),
-                      if (label != null && label.isNotEmpty)
-                        Text(
-                          label,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+
+                      if (label != null && label.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              label,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: AppColors.textSecondary,
+                                fontSize: 12,
                               ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 4),
+                            if (isGateway)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.darkBlue.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.wifi_tethering_rounded,
+                                      size: 12,
+                                      color: AppColors.darkBlue,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Gateway',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                        color: AppColors.darkBlue,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      height: 40,
-                      child: isGateway
-                          ? ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.darkBlue.withOpacity(0.9),
-                                foregroundColor: Colors.white,
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          SizedBox(
+                            height: 34,
+                            child: isGateway
+                                ? TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                foregroundColor: Colors.red.shade700,
+                                backgroundColor:
+                                Colors.red.shade50.withValues(alpha: 0.9),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(999),
                                 ),
                               ),
                               onPressed: c.removingGatewayUnicast.value != null ||
-                                      c.removingDeviceUnicast.value != null
+                                  c.removingDeviceUnicast.value != null
                                   ? null
                                   : () => _removeGatewayWithDialog(context, c),
-                              child: const Text(
-                                'Remove gateway',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              icon: const Icon(Icons.close_rounded, size: 14),
+                              label: const Text(
+                                'Remove Gateway',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             )
-                          : ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.darkgreen,
+                                : TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
                                 foregroundColor: Colors.white,
+                                backgroundColor: AppColors.darkgreen,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius: BorderRadius.circular(999),
                                 ),
                               ),
                               onPressed: unicast == null ||
-                                      isSetting ||
-                                      c.removingDeviceUnicast.value != null
+                                  isSetting ||
+                                  c.removingDeviceUnicast.value != null
                                   ? null
                                   : () => c.setAsGateway(d),
-                              child: isSetting
+                              icon: isSetting
                                   ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Set as Gateway',
-                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                                    ),
-                            ),
-                    ),
-                    if (unicast != null) ...[
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 40,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                            side: BorderSide(color: Colors.red.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                                  : const Icon(
+                                Icons.wifi_tethering_rounded,
+                                size: 14,
+                              ),
+                              label: Text(
+                                isGateway ? 'Gateway' : 'Set gateway',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                          onPressed: c.removingDeviceUnicast.value != null ||
-                                  c.removingGatewayUnicast.value != null
-                              ? null
-                              : () => _removeDeviceWithDialog(context, c, d),
-                          child: c.removingDeviceUnicast.value == unicast
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text(
-                                  'Remove',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          if (unicast != null) ...[
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              height: 32,
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  foregroundColor: Colors.red.shade700,
+                                  side: BorderSide(color: Colors.red.shade300),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
                                 ),
-                        ),
+                                onPressed: c.removingDeviceUnicast.value != null ||
+                                    c.removingGatewayUnicast.value != null
+                                    ? null
+                                    : () => _removeDeviceWithDialog(context, c, d),
+                                icon: c.removingDeviceUnicast.value == unicast
+                                    ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                                )
+                                    : const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 14,
+                                ),
+                                label: const Text(
+                                  'Remove Device',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
-                  ],
+                  ),
+
                 ),
               ],
             ),
