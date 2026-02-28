@@ -85,9 +85,20 @@ class MeshController extends GetxController {
           await meshManagerApi.importMeshNetworkJson(json.toString());
           return;
         }
-        // This network has no mesh yet. Start fresh; do not load from local storage (that may be another network where the device was already added).
-        await meshManagerApi.resetMeshNetwork();
-        await Future.delayed(const Duration(milliseconds: 600));
+        // ❌ No JSON export found for this network
+        // Check if there's already an existing mesh network loaded
+        final existingNetwork = meshNetwork.value;
+        final hasExistingNetwork =
+            existingNetwork != null && (existingNetwork.nodes.isBlank ?? false);
+
+        if (hasExistingNetwork) {
+          // Existing network has nodes — erase it before starting fresh
+          await meshManagerApi.resetMeshNetwork();
+          await Future.delayed(const Duration(milliseconds: 600));
+        } else {
+          // Network is empty — no need to erase, just load fresh without resetting
+          await meshManagerApi.loadMeshNetwork();
+        }
         return;
       } catch (_) {}
     }

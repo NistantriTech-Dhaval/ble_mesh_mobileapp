@@ -163,25 +163,24 @@ class _HomeTab extends StatelessWidget {
                   ),
                   if (c.isConnected.value) ...[
                     const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkgreen.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.cloud_done, size: 18, color: AppColors.darkgreen),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Connected',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.darkgreen,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                          ),
-                        ],
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                      await c.refreshDevices();
+                      },
+                      icon: const Icon(Icons.sync, size: 18),
+                      label: const Text('Fetch Devices'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.darkgreen.withValues(alpha: 0.1),
+                        foregroundColor: AppColors.darkgreen,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.darkgreen,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],

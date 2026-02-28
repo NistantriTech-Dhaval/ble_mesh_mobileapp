@@ -106,9 +106,6 @@ class NetworkDevicesController extends GetxController {
     if (removingDeviceUnicast.value != null) return;
     removingDeviceUnicast.value = unicast;
     try {
-      if (device['isGateway'] == true) {
-        await netController.clearGateway(meshNetworkId);
-      }
       await meshController.loadMeshNetworkForCommissioning(meshNetworkId);
       await Future.delayed(const Duration(milliseconds: 500));
       final nodes = await meshController.meshNetwork.value?.nodes ?? [];
