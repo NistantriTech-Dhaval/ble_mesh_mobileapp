@@ -13,6 +13,7 @@ import 'package:retry/retry.dart';
 /// A Singleton that should be used to handle **BLE Mesh** connectivity features.
 ///
 /// It implements the methods to init GATT layer, subscribe to notifications and send PDUs for **BLE Mesh** nodes.
+/// Android-only logic (delay after subscribe, proxy segmentation) is guarded with Platform.isAndroid; iOS unchanged.
 /// {@endtemplate}
 class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
   static final BleMeshManager _instance = BleMeshManager._(FlutterReactiveBle());
@@ -65,7 +66,13 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
   @override
   Future<DiscoveredService?> isRequiredServiceSupported(bool shouldCheckDoozCustomService) async {
     // In the case of a mesh node, the advertised service should be either 0x1827 or 0x1828
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: discoverServices() - STUCK? Waiting for GATT service discovery');
+    }
     _discoveredServices = await bleInstance.discoverServices(device!.id);
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: discoverServices() done. isProvisioningCompleted=$isProvisioningCompleted');
+    }
     _log('services $_discoveredServices');
     isProvisioningCompleted = false;
     if (_hasExpectedService(meshProxyUuid)) {
@@ -106,8 +113,14 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
 
   @override
   Future<void> initGatt() async {
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: requestMtu() - STUCK? Waiting for MTU negotiation');
+    }
     // request highest MTU (only useful on Android)
     final negotiatedMtu = await bleInstance.requestMtu(deviceId: device!.id, mtu: mtuSizeMax);
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: MTU=$negotiatedMtu. Subscribing to provisioning/proxy data out - STUCK? Waiting for subscribe');
+    }
     if (Platform.isAndroid) {
       mtuSize = negotiatedMtu - 3;
     } else if (Platform.isIOS) {
@@ -127,6 +140,15 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
       await _meshProvisioningDataOutSubscription?.cancel();
       _meshProvisioningDataOutSubscription =
           _getDataOutSubscription(_getQualifiedCharacteristic(meshProvisioningDataOut, discoveredService.serviceId));
+    }
+    // Android: ensure CCCD 0x0001 (enable notify) is written and acked before we send any PDU.
+    // Otherwise the device sees "Client wrote 0x0000" / protocol timeout because we write to Data In before notify is enabled on Data Out.
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: wait for notify enable (CCCD 0x0001) before device ready');
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: initGatt() done (MTU set, subscribed to data out). Device ready will fire next.');
     }
   }
 
@@ -184,55 +206,61 @@ class BleMeshManager<T extends BleMeshManagerCallbacks> extends BleManager<T> {
   //   }
   // }
   Future<void> sendPdu(List<int> pdu) async {
-    if(Platform.isIOS){
-    // Max payload per segment (minus 1 byte for SAR+MsgType header).
-    final maxSegmentSize = mtuSize - 1;
-    final totalSegments = (pdu.length / maxSegmentSize).ceil();
+    if (Platform.isIOS) {
+      // Max payload per segment (minus 1 byte for SAR+MsgType header).
+      final maxSegmentSize = mtuSize - 1;
+      final totalSegments = (pdu.length / maxSegmentSize).ceil();
 
-    if (totalSegments == 1) {
-      await _send(pdu);
-      return;
-    }
-
-    var offset = 1;
-    for (var segO = 0; segO < totalSegments; segO++) {
-      final end = math.min(offset + maxSegmentSize, pdu.length);
-      final segmentData = pdu.sublist(offset, end);
-
-      // SAR bits (2 bits):
-      // 00 = Complete message
-      // 01 = First segment
-      // 10 = Continuation segment
-      // 11 = Last segment
-      int sar;
-      if (segO == 0) {
-        sar = 0x01; // First
-      } else if (segO == totalSegments - 1) {
-        sar = 0x03; // Last
-      } else {
-        sar = 0x02; // Continuation
+      if (totalSegments == 1) {
+        await _send(pdu);
+        return;
       }
 
-      final packet = _buildProxyPdu(sar, segmentData);
-      await _send(packet);
+      var offset = 1;
+      for (var segO = 0; segO < totalSegments; segO++) {
+        final end = math.min(offset + maxSegmentSize, pdu.length);
+        final segmentData = pdu.sublist(offset, end);
 
-      offset = end;
-    }
-    }
-    else {
-        final chunks = ((pdu.length / (mtuSize - 1)) + 1).floor();
-        var srcOffset = 0;
-        if (chunks > 1) {
-          for (var i = 0; i < chunks; i++) {
-            final length = math.min(pdu.length - srcOffset, mtuSize);
-            final sublist = pdu.sublist(srcOffset, srcOffset + length);
-            final segmentedBuffer = sublist;
-            await _send(segmentedBuffer);
-            srcOffset += length;
-          }
+        // SAR bits (2 bits):
+        // 00 = Complete message
+        // 01 = First segment
+        // 10 = Continuation segment
+        // 11 = Last segment
+        int sar;
+        if (segO == 0) {
+          sar = 0x01; // First
+        } else if (segO == totalSegments - 1) {
+          sar = 0x03; // Last
         } else {
-          await _send(pdu);
+          sar = 0x02; // Continuation
         }
+
+        final packet = _buildProxyPdu(sar, segmentData);
+        await _send(packet);
+
+        offset = end;
+      }
+    } else {
+      // Android: Nordic applySegmentation() returns one buffer with variable-length segments.
+      // Segment 0 = min(pduLen, mtuSize) bytes at 0; then dstOffset += mtuSize (gap!);
+      // segment 1..n-1 start at mtuSize, 2*mtuSize, ... and are mtuSize bytes (middle) or
+      // 1+payload (last). We must send exact segments so ESP proxy SAR matches (iOS works because we build segments ourselves).
+      final chunks = (pdu.length + 1 + mtuSize) ~/ (mtuSize + 1);
+      if (chunks <= 1) {
+        await _send(pdu);
+        return;
+      }
+      final pduLen = pdu.length - chunks + 1;
+      final seg0Size = math.min(pduLen, mtuSize);
+      // Segment 0: indices 0..seg0Size-1
+      await _send(pdu.sublist(0, seg0Size));
+      var offset = mtuSize; // Nordic advances by mtuSize after each segment
+      for (var i = 1; i < chunks; i++) {
+        final isLast = i == chunks - 1;
+        final segLen = isLast ? (pdu.length - offset) : mtuSize;
+        await _send(pdu.sublist(offset, offset + segLen));
+        offset += mtuSize;
+      }
     }
   }
 

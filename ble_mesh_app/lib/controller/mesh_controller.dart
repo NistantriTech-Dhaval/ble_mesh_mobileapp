@@ -228,7 +228,7 @@ class MeshController extends GetxController {
             events: provisioningEvent,
           )
           .timeout(
-            const Duration(seconds: 60),
+            const Duration(seconds: 120),
             onTimeout: () async {
               print("Getting timeout error");
               AppSnackBar.show("error", "Provisioning failed");
@@ -358,7 +358,7 @@ class MeshController extends GetxController {
           } catch (_) {}
         }
         // Wait then navigate
-        await Future.delayed(const Duration(seconds: 6));
+        await Future.delayed(const Duration(seconds: 5));
           Get.back();
         isProvisioning.value = false;
 

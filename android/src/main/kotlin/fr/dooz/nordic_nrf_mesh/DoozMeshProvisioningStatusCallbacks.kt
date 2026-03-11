@@ -13,7 +13,7 @@ import no.nordicsemi.android.mesh.transport.ProvisionedMeshNode
 
 class DoozMeshProvisioningStatusCallbacks(var binaryMessenger: BinaryMessenger, var eventSink : EventChannel.EventSink?, var unprovisionedMeshNodes: ArrayList<DoozUnprovisionedMeshNode>, var doozMeshManagerApi: DoozMeshManagerApi) : MeshProvisioningStatusCallbacks {
     override fun onProvisioningStateChanged(meshNode: UnprovisionedMeshNode?, state: ProvisioningState.States?, data: ByteArray?) {
-        Log.d(this.javaClass.name, "onProvisioningStateChanged ${meshNode?.deviceUuid?.toString()}")
+        Log.d(this.javaClass.name, "[Android Provisioning STEP] onProvisioningStateChanged state=${state?.name} uuid=${meshNode?.deviceUuid?.toString()}")
         val meshNodeAlreadySaved = unprovisionedMeshNodes.any { it ->
             it.meshNode.deviceUuid == meshNode?.deviceUuid
         }
@@ -37,7 +37,7 @@ class DoozMeshProvisioningStatusCallbacks(var binaryMessenger: BinaryMessenger, 
     }
 
     override fun onProvisioningFailed(meshNode: UnprovisionedMeshNode?, state: ProvisioningState.States?, data: ByteArray?) {
-        Log.d(this.javaClass.name, "onProvisioningFailed")
+        Log.d(this.javaClass.name, "[Android Provisioning STEP] onProvisioningFailed state=${state?.name} - STUCK? Provisioning failed here")
         Handler(Looper.getMainLooper()).post {
             eventSink?.success(mapOf(
                     "eventName" to "onProvisioningFailed",
@@ -53,7 +53,7 @@ class DoozMeshProvisioningStatusCallbacks(var binaryMessenger: BinaryMessenger, 
     }
 
     override fun onProvisioningCompleted(meshNode: ProvisionedMeshNode?, state: ProvisioningState.States?, data: ByteArray?) {
-        Log.d(this.javaClass.name, "onProvisioningCompleted")
+        Log.d(this.javaClass.name, "[Android Provisioning STEP] onProvisioningCompleted - provisioning done, node will reconnect as proxy")
         Handler(Looper.getMainLooper()).post {
             eventSink?.success(mapOf(
                     "eventName" to "onProvisioningCompleted",

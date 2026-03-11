@@ -30,7 +30,7 @@ class ScanningAndProvisioning extends StatefulWidget {
 }
 
 class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
-  final MeshController controller = Get.put(MeshController());
+  final MeshController controller = Get.put(MeshController(), permanent: true);
   final FlutterReactiveBle flutterReactiveBle=FlutterReactiveBle();
   @override
   void initState() {

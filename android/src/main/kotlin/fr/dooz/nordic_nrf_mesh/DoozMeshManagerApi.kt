@@ -105,6 +105,7 @@ class DoozMeshManagerApi(context: Context, binaryMessenger: BinaryMessenger) : S
                 result.success(null)
             }
             "identifyNode" -> {
+                Log.d(tag, "[Android Provisioning STEP] identifyNode() called - requests capabilities from device (STUCK? if no PROVISIONING_CAPABILITIES after this)")
                 mMeshManagerApi.identifyNode(UUID.fromString(call.argument<String>("serviceUuid")!!))
                 result.success(null)
             }
@@ -473,9 +474,11 @@ class DoozMeshManagerApi(context: Context, binaryMessenger: BinaryMessenger) : S
                 val uuid = UUID.fromString(call.argument("uuid")!!)
                 val unProvisionedMeshNode = unProvisionedMeshNodes.firstOrNull { it.meshNode.deviceUuid == uuid }
                 if (unProvisionedMeshNode == null) {
+                    Log.e(tag, "[Android Provisioning STEP] provisioning() FAIL: MeshNode with uuid $uuid not found - STUCK? Capabilities not received or node not in list")
                     result.error("NOT_FOUND", "MeshNode with uuid $uuid doesn't exist", null)
                     return
                 }
+                Log.d(tag, "[Android Provisioning STEP] startProvisioning() called - Nordic lib runs provisioning (STUCK? if no onProvisioningCompleted)")
                 mMeshManagerApi.startProvisioning(unProvisionedMeshNode.meshNode)
                 result.success(null)
             }

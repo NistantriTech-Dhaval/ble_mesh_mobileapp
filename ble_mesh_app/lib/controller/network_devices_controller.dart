@@ -16,8 +16,8 @@ class NetworkDevicesController extends GetxController {
   final String networkName;
 
   final MeshNetworkController netController = Get.find<MeshNetworkController>();
-  late final MeshController meshController = Get.put(MeshController());
-  late final ProvisionedDeviceController provController = Get.put(ProvisionedDeviceController());
+  late final MeshController meshController = Get.put(MeshController(), permanent: true);
+  late final ProvisionedDeviceController provController = Get.put(ProvisionedDeviceController(), permanent: true);
 
   final loading = true.obs;
   final devices = <Map<String, dynamic>>[].obs;
@@ -71,10 +71,16 @@ class NetworkDevicesController extends GetxController {
           break;
         }
       }
+      removeGatewayStatus.value = 'Checking permissions...';
+      await meshController.askPermissions();
       removeGatewayStatus.value = 'Connecting to device...';
       final removedFromFirmware = await provController.connectAndSendRemoveGateway(deviceName);
       if (!removedFromFirmware) {
         removeGatewayStatus.value = '';
+        AppSnackBar.show(
+          'warning',
+          'Could not find device. Grant Location & Bluetooth permission in Settings if needed, then try again.',
+        );
         return;
       }
       removeGatewayStatus.value = 'Updating cloud...';

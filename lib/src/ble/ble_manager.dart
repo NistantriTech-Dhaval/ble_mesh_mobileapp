@@ -122,6 +122,9 @@ abstract class BleManager<E extends BleManagerCallbacks> {
     List<String>? whitelist,
     bool shouldCheckDoozCustomService = false,
   }) async {
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: connect() called for ${discoveredDevice.id}');
+    }
     if (callbacks == null) {
       throw const BleManagerException(
         BleManagerFailureCode.callbacks,
@@ -136,6 +139,9 @@ abstract class BleManager<E extends BleManagerCallbacks> {
     final watch = Stopwatch()..start();
     final _callbacks = callbacks as E;
     _connectCompleter = Completer<void>();
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: STUCK? Waiting for connectToDevice + connection state');
+    }
     final connectTimeout = Timer(connectionTimeout, () {
       if (!_connectCompleter.isCompleted) {
         _log('connect failed after ${watch.elapsedMilliseconds}ms');
@@ -239,6 +245,9 @@ abstract class BleManager<E extends BleManagerCallbacks> {
             });
     await _connectCompleter.future;
     connectTimeout.cancel();
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: connect() completed in ${watch.elapsedMilliseconds}ms');
+    }
     _log('connect took ${watch.elapsedMilliseconds}ms');
   }
 
@@ -266,6 +275,9 @@ abstract class BleManager<E extends BleManagerCallbacks> {
   Future<void> _negotiateAndInitGatt(bool shouldCheckDoozCustomService) async {
     final _callbacks = callbacks as E;
     DiscoveredService? service;
+    if (Platform.isAndroid) {
+      debugPrint('[NordicNrfMesh BLE] STEP: STUCK? Waiting for discoverServices (isRequiredServiceSupported)');
+    }
     try {
       service = await isRequiredServiceSupported(shouldCheckDoozCustomService);
     } on BleManagerException catch (e) {
@@ -276,6 +288,9 @@ abstract class BleManager<E extends BleManagerCallbacks> {
     }
     if (service != null) {
       // valid mesh node
+      if (Platform.isAndroid) {
+        debugPrint('[NordicNrfMesh BLE] STEP: Service found (mesh provisioning or proxy). STUCK? Waiting for initGatt (MTU + subscribe)');
+      }
       if (!_callbacks.onServicesDiscoveredController.isClosed &&
           _callbacks.onServicesDiscoveredController.hasListener) {
         _callbacks.onServicesDiscoveredController.add(BleManagerCallbacksDiscoveredServices(_device!, service));

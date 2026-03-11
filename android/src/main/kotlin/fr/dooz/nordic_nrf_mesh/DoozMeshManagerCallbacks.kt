@@ -100,7 +100,7 @@ class DoozMeshManagerCallbacks(private val binaryMessenger: BinaryMessenger, var
     }
 
     override fun sendProvisioningPdu(meshNode: UnprovisionedMeshNode?, pdu: ByteArray?) {
-        Log.d(this.javaClass.name, "sendProvisioningPdu")
+        Log.d(this.javaClass.name, "[Android Provisioning STEP] sendProvisioningPdu len=${pdu?.size ?: 0}")
         Handler(Looper.getMainLooper()).post {
             eventSink?.success(mapOf(
                     "eventName" to "sendProvisioningPdu",

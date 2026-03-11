@@ -19,7 +19,7 @@ class ProvisionedDeviceController extends GetxController {
   StreamSubscription<IMeshNetwork?>? _importSub;
   StreamSubscription<IMeshNetwork?>? _loadSub;
   final GlobalKey<FormBuilderState> formKey = GlobalKey<FormBuilderState>();
-  late final MeshController meshController = Get.put(MeshController());
+  late final MeshController meshController = Get.put(MeshController(), permanent: true);
   final isScanning = false.obs;
   final password_controller = TextEditingController();
   final FlutterReactiveBle flutterReactiveBle = FlutterReactiveBle();
@@ -366,6 +366,9 @@ class ProvisionedDeviceController extends GetxController {
           },
           onError: (err) {
             debugPrint("Scan error: $err");
+            if (err.toString().contains('Location Permission') || err.toString().contains('code 3)')) {
+              debugPrint("Remove gateway: Grant Location (and Bluetooth) permission in Settings for BLE scan.");
+            }
             if (!completer.isCompleted) completer.complete();
           },
         );
@@ -490,12 +493,12 @@ class ProvisionedDeviceController extends GetxController {
             qChar,
             value: payloadBytes,
           );
-          wifistatusText.value = "Connected to";
-          await Future.delayed(Duration(seconds: 7));
           if (meshNetworkId != null && gatewayUnicast != null && Get.isRegistered<MeshNetworkController>()) {
             final ok = await Get.find<MeshNetworkController>().setGateway(meshNetworkId!, gatewayUnicast);
             if (!ok) debugPrint('setGateway failed after WiFi provisioning');
           }
+          wifistatusText.value = "Connected to";
+          await Future.delayed(Duration(seconds: 5));
           Get.back();
         }
       }
