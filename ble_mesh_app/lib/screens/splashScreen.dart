@@ -34,6 +34,8 @@ class _LoadingScreenState extends State<LoadingScreen> {
         decoration: BoxDecoration(color: Color(0xFF002B34)),
         child: Center(
           child: Image(
+            height: 120,
+            width: 120,
             image: AssetImage(AssetsPath.splashLogo),
           ),
         ));

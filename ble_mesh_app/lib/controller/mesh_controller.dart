@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:ntpl_ble_mesh_demo/Comman_Widget/custom_snackbar.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:ntpl_ble_mesh_demo/controller/tb_device_list_controller.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:ntpl_ble_mesh_demo/controller/mesh_network_controller.dart';
@@ -30,7 +31,7 @@ class MeshController extends GetxController {
 
   final statusText = "Provisioning is in process...".obs;
   final bleMeshManager = BleMeshManager();
-
+  final TbDeviceListController tbDeviceListController = Get.find<TbDeviceListController>();
   @override
   Future<void> onInit() async {
     super.onInit();
@@ -362,6 +363,7 @@ class MeshController extends GetxController {
         Get.back();
         statusText.value = "Provisioning is in process...";
         isProvisioning.value = false;
+        tbDeviceListController.subscribeToDevices();
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);
       } catch (e) {

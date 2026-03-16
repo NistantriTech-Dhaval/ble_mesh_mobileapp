@@ -3,6 +3,7 @@ import 'package:ntpl_ble_mesh_demo/Comman_Widget/custom_snackbar.dart';
 import 'package:ntpl_ble_mesh_demo/controller/mesh_controller.dart';
 import 'package:ntpl_ble_mesh_demo/controller/mesh_network_controller.dart';
 import 'package:ntpl_ble_mesh_demo/controller/provisioned_device_controller.dart';
+import 'package:ntpl_ble_mesh_demo/controller/tb_device_list_controller.dart';
 import 'package:ntpl_ble_mesh_demo/mesh/wifi_provisioning_page.dart';
 import 'package:nordic_nrf_mesh/nordic_nrf_mesh.dart';
 
@@ -16,6 +17,7 @@ class NetworkDevicesController extends GetxController {
   final String networkName;
 
   final MeshNetworkController netController = Get.find<MeshNetworkController>();
+  final TbDeviceListController tbDeviceListController = Get.find<TbDeviceListController>();
   late final MeshController meshController = Get.put(MeshController(), permanent: true);
   late final ProvisionedDeviceController provController = Get.put(ProvisionedDeviceController(), permanent: true);
 
@@ -129,13 +131,12 @@ class NetworkDevicesController extends GetxController {
       }
       provController.selectedNode = node;
       final deprovisioned = await provController.connectAndDeprovision(deviceName, node);
-      print(deprovisioned);
+      print("Deprovisioned Response $deprovisioned");
       if (!deprovisioned) {
+        Get.back();
         AppSnackBar.show('error', 'Keep device in range and try again.');
         return;
       }
-      print("Delete Node Uuid ${node.uuid}");
-      await meshController.meshManagerApi.meshNetwork?.deleteNode(node.uuid);
       final exported = await meshController.meshManagerApi.exportMeshNetwork();
       if (exported != null) {
         final nodeCount = (await meshController.meshNetwork.value?.nodes)?.length ?? 0;
@@ -147,12 +148,16 @@ class NetworkDevicesController extends GetxController {
       }
       final ok = await netController.removeDeviceFromAssetAndDelete(meshNetworkId, deviceId);
       if (!ok) {
-        AppSnackBar.show('error', 'Cloud update failed');
+        Get.back();
+        AppSnackBar.show('error', 'Failed to remove device');
       } else {
+        Get.back();
         AppSnackBar.show('success', 'Device removed');
       }
       await loadDevices();
+      tbDeviceListController.subscribeToDevices();
     } catch (e) {
+      Get.back();
       AppSnackBar.show('error', 'Failed to remove device');
     } finally {
       removingDeviceUnicast.value = null;
@@ -193,6 +198,7 @@ class NetworkDevicesController extends GetxController {
         ),
       );
       loadDevices();
+      tbDeviceListController.subscribeToDevices();
     } catch (_) {
       AppSnackBar.show('error', 'Failed to open gateway setup');
     } finally {

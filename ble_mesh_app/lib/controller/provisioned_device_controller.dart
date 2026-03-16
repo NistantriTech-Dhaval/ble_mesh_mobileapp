@@ -508,9 +508,9 @@ class ProvisionedDeviceController extends GetxController {
       print("❌ Service discovery or provisioning failed: $e");
       password_controller.clear();
     } finally {
-      await meshController.bleMeshManager.disconnect();
       isWifiProvisioning.value = false;
       wifistatusText.value = "Connecting...";
+      await meshController.bleMeshManager.disconnect();
     }
   }
 

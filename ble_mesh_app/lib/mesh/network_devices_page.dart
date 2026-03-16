@@ -173,7 +173,6 @@ class NetworkDevicesPage extends StatelessWidget {
       barrierDismissible: false,
     );
     await c.removeDevice(device);
-    Get.back(closeOverlays: true);
   }
 
   Widget _buildBody(BuildContext context, NetworkDevicesController c) {
