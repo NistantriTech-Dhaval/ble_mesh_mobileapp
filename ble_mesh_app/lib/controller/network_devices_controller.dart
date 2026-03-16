@@ -129,11 +129,13 @@ class NetworkDevicesController extends GetxController {
       }
       provController.selectedNode = node;
       final deprovisioned = await provController.connectAndDeprovision(deviceName, node);
+      print(deprovisioned);
       if (!deprovisioned) {
         AppSnackBar.show('error', 'Keep device in range and try again.');
         return;
       }
-      await meshController.meshManagerApi.meshNetwork!.deleteNode(node.uuid);
+      print("Delete Node Uuid ${node.uuid}");
+      await meshController.meshManagerApi.meshNetwork?.deleteNode(node.uuid);
       final exported = await meshController.meshManagerApi.exportMeshNetwork();
       if (exported != null) {
         final nodeCount = (await meshController.meshNetwork.value?.nodes)?.length ?? 0;

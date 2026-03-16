@@ -326,7 +326,6 @@ class MeshController extends GetxController {
           }
         }
         await bleMeshManager.disconnect();
-        statusText.value = "Provisioning is Completed";
         // Use selected mesh network asset: save mesh data, create device by MAC, store required info, set as gateway
         if (meshNetworkId != null && meshNetworkId.isNotEmpty) {
           try {
@@ -357,9 +356,11 @@ class MeshController extends GetxController {
             );
           } catch (_) {}
         }
-        // Wait then navigate
+        // Show success GIF, wait for user to see it, then navigate
+        statusText.value = "Provisioning is Completed";
         await Future.delayed(const Duration(seconds: 5));
-          Get.back();
+        Get.back();
+        statusText.value = "Provisioning is in process...";
         isProvisioning.value = false;
 
         // Future.delayed(const Duration(milliseconds: 500), widget.onGoToControl);

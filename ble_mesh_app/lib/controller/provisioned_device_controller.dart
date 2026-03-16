@@ -331,7 +331,7 @@ class ProvisionedDeviceController extends GetxController {
       await meshController.bleMeshManager.disconnect();
       await meshController.bleMeshManager.connect(
         selectedDevice!,
-        connectionTimeout: const Duration(seconds: 10),
+        connectionTimeout: const Duration(seconds: 60),
       );
       await Future.delayed(const Duration(milliseconds: 800));
 
@@ -499,6 +499,7 @@ class ProvisionedDeviceController extends GetxController {
           }
           wifistatusText.value = "Connected to";
           await Future.delayed(Duration(seconds: 5));
+          wifistatusText.value = "Connecting...";
           Get.back();
         }
       }

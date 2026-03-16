@@ -36,6 +36,10 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
   void initState() {
     super.initState();
     initNetwork();
+    // Preload success GIF so it appears immediately when provisioning completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      precacheImage(AssetImage(AssetsPath.success_gif), context);
+    });
   }
 
   initNetwork() async {
@@ -72,24 +76,33 @@ class _ScanningAndProvisioningState extends State<ScanningAndProvisioning> {
               ? Column(
                   children: [
                     Spacer(),
-                    if (controller.statusText.value !=
-                        "Provisioning is Completed")
-                      const CircularProgressLoader(
-                        size: 40,
-                        strokeWidth: 7,
-                        backgroundcolor: AppColors.grayLight,
+                    // Fixed height so layout doesn't jump when switching from loader to GIF
+                    SizedBox(
+                      height: controller.statusText.value ==
+                          "Provisioning is Completed"?100:50,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: controller.statusText.value ==
+                                "Provisioning is Completed"
+                            ? Image.asset(
+                                AssetsPath.success_gif,
+                                key: const ValueKey('success_gif'),
+                                height: 100,
+                                width: 100,
+                                fit: BoxFit.contain,
+                                gaplessPlayback: true,
+                              )
+                            : const Center(
+                                key: ValueKey('loader'),
+                                child: CircularProgressLoader(
+                                  size: 40,
+                                  strokeWidth: 7,
+                                  backgroundcolor: AppColors.grayLight,
+                                ),
+                              ),
                       ),
-                    if (controller.statusText.value !=
-                        "Provisioning is Completed")
-                      const SizedBox(height: 24),
-                    if (controller.statusText.value ==
-                        "Provisioning is Completed")
-                      Image.asset(
-                        AssetsPath.success_gif,
-                        height: 120,
-                        width: 120,
-                        fit: BoxFit.cover,
-                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Text(
                       controller.statusText.value,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
