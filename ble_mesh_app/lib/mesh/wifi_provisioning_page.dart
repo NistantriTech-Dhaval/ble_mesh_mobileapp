@@ -184,18 +184,15 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                           ]
                         : [
                             Spacer(),
-                            if (controller.wifistatusText.value !=
-                                "Connected to")
+                            if (!controller.wifiProvisioningCompleted.value)
                               const CircularProgressLoader(
                                 size: 40,
                                 strokeWidth: 7,
                                 backgroundcolor: AppColors.grayLight,
                               ),
-                            if (controller.wifistatusText.value !=
-                                "Connected to")
+                            if (!controller.wifiProvisioningCompleted.value)
                               const SizedBox(height: 24),
-                            if (controller.wifistatusText.value ==
-                                "Connected to")
+                            if (controller.wifiProvisioningCompleted.value)
                               Image.asset(
                                 AssetsPath.success_gif,
                                 height: 120,
@@ -216,8 +213,7 @@ class _WifiProvisioningPageState extends State<WifiProvisioningPage> {
                                       ),
                                   textAlign: TextAlign.center,
                                 ),
-                                if (controller.wifistatusText.value ==
-                                    "Connected to")
+                                if (controller.wifiProvisioningCompleted.value)
                                   Text(
                                     " ${controller.selectedWifi.value}",
                                     style: Theme.of(context)

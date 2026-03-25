@@ -28,6 +28,7 @@ class ProvisionedDeviceController extends GetxController {
   final isWifiProvisioning = false.obs;
   final wifiConnectionFailed = false.obs;
   final wifistatusText = "Connecting...".obs;
+  final wifiProvisioningCompleted = false.obs;
 
 
   Future<void> loadMeshNetwork() async {
@@ -235,6 +236,7 @@ class ProvisionedDeviceController extends GetxController {
   }) async {
     isWifiProvisioning.value = true;
     wifiConnectionFailed.value = false;
+    wifiProvisioningCompleted.value = false;
     wifistatusText.value = "Connecting...";
     DiscoveredDevice? selectedDevice;
 
@@ -498,8 +500,8 @@ class ProvisionedDeviceController extends GetxController {
             if (!ok) debugPrint('setGateway failed after WiFi provisioning');
           }
           wifistatusText.value = "Connected to";
+          wifiProvisioningCompleted.value = true;
           await Future.delayed(Duration(seconds: 5));
-          wifistatusText.value = "Connecting...";
           Get.back();
         }
       }
@@ -509,6 +511,7 @@ class ProvisionedDeviceController extends GetxController {
       password_controller.clear();
     } finally {
       isWifiProvisioning.value = false;
+      wifiProvisioningCompleted.value = false;
       wifistatusText.value = "Connecting...";
       await meshController.bleMeshManager.disconnect();
     }
